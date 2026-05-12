@@ -11,7 +11,6 @@ class Product extends Model
     protected $fillable = [
         'nama_produk',
         'harga',
-        'stok',
         'kategori_id',
         'gambar',
     ];
@@ -20,7 +19,6 @@ class Product extends Model
     {
         return [
             'harga' => 'integer',
-            'stok' => 'integer',
         ];
     }
 
@@ -38,6 +36,6 @@ class Product extends Model
 
     public function imageUrl(): ?string
     {
-        return $this->gambar ? asset('storage/'.$this->gambar) : null;
+        return $this->gambar ? asset('uploads/'.$this->gambar) : null;
     }
 }

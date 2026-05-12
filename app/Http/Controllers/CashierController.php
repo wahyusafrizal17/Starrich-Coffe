@@ -24,12 +24,53 @@ class CashierController extends Controller
                 'id' => $p->id,
                 'nama_produk' => $p->nama_produk,
                 'harga' => $p->harga,
-                'stok' => $p->stok,
                 'kategori_id' => $p->kategori_id,
                 'gambar' => $p->imageUrl(),
             ]);
 
         return view('cashier.index', compact('categories', 'products'));
+    }
+
+    public function invoice(Transaction $transaction): View
+    {
+        $transaction->load(['user', 'details.product']);
+
+        return view('cashier.invoice', compact('transaction'));
+    }
+
+    public function history(Request $request): View
+    {
+        $from = $request->date('from');
+        $to = $request->date('to');
+        $q = $request->string('q')->trim()->toString();
+
+        $base = Transaction::with(['user', 'details.product'])->latest();
+
+        if ($from) {
+            $base->where('created_at', '>=', $from->copy()->startOfDay());
+        }
+        if ($to) {
+            $base->where('created_at', '<=', $to->copy()->endOfDay());
+        }
+        if ($q !== '') {
+            $base->where(function ($qq) use ($q) {
+                $qq->where('id', $q)
+                    ->orWhereHas('user', fn ($u) => $u->where('name', 'like', '%'.$q.'%'));
+            });
+        }
+
+        $sumTotal = (int) (clone $base)->sum('total');
+        $countTrx = (clone $base)->count();
+        $transactions = $base->paginate(20)->withQueryString();
+
+        return view('cashier.history', [
+            'transactions' => $transactions,
+            'sumTotal' => $sumTotal,
+            'countTrx' => $countTrx,
+            'from' => $from,
+            'to' => $to,
+            'q' => $q,
+        ]);
     }
 
     public function checkout(Request $request): JsonResponse
@@ -49,13 +90,7 @@ class CashierController extends Controller
 
             foreach ($data['items'] as $line) {
                 /** @var Product $product */
-                $product = Product::query()->lockForUpdate()->findOrFail($line['product_id']);
-
-                if ($product->stok < $line['qty']) {
-                    throw ValidationException::withMessages([
-                        'items' => 'Stok tidak cukup untuk '.$product->nama_produk.' (tersisa '.$product->stok.').',
-                    ]);
-                }
+                $product = Product::query()->findOrFail($line['product_id']);
 
                 $subtotal = $product->harga * $line['qty'];
                 $total += $subtotal;
@@ -112,7 +147,6 @@ class CashierController extends Controller
                     'harga' => $row['product']->harga,
                     'subtotal' => $row['subtotal'],
                 ]);
-                $row['product']->decrement('stok', $row['qty']);
             }
 
             return [

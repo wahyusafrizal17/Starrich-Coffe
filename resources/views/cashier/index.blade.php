@@ -11,6 +11,7 @@
             ->values()
             ->all(),
         'checkoutUrl' => route('cashier.checkout'),
+        'invoiceUrlTemplate' => route('cashier.invoice', ['transaction' => '__ID__']),
         'csrf' => csrf_token(),
     ];
 @endphp
@@ -38,6 +39,12 @@
             <div class="pc-header-meta">
                 <span>Kasir: <strong>{{ auth()->user()->name }}</strong></span>
                 <div class="pc-header-actions">
+                    <a href="{{ route('cashier.history') }}" title="Riwayat pesanan">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 2m6-2a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/>
+                        </svg>
+                        History
+                    </a>
                     @if (auth()->user()->isAdmin())
                         <a href="{{ route('dashboard') }}">Admin</a>
                     @endif
@@ -94,16 +101,13 @@
                         <button
                             type="button"
                             class="pc-menu-card"
-                            :class="{ 'pc-out-of-stock': p.stok <= 0 }"
                             x-on:click="addProduct(p)"
-                            :disabled="p.stok <= 0"
                         >
                             <div class="pc-card-thumb">
                                 <img x-show="p.gambar" x-cloak :src="p.gambar" :alt="p.nama_produk" loading="lazy" />
                                 <span class="pc-card-emoji" x-show="!p.gambar" x-text="emojiIcon(p)" x-cloak></span>
                             </div>
                             <div class="pc-card-name" x-text="p.nama_produk"></div>
-                            <div class="pc-card-desc">Stok <span x-text="p.stok"></span></div>
                             <div class="pc-card-footer">
                                 <span class="pc-card-price" x-text="formatRp(p.harga)"></span>
                                 <span class="pc-card-tag" x-show="categoryShort(p)" x-text="categoryShort(p)" x-cloak></span>

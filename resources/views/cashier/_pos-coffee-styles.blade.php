@@ -77,7 +77,11 @@
         cursor: pointer;
         transition: background 0.15s ease;
         white-space: nowrap;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
     }
+    .pc-header-actions a svg { display: inline-block; }
     .pc-header-actions a:hover,
     .pc-header-actions button:hover { background: rgba(255,255,255,0.08); }
 
@@ -214,8 +218,7 @@
     }
     .pc-menu-card:hover:not(:disabled) { border-color: var(--caramel); box-shadow: var(--shadow-md); transform: translateY(-2px); }
     .pc-menu-card:hover:not(:disabled)::before { transform: scaleX(1); }
-    .pc-menu-card:disabled,
-    .pc-menu-card.pc-out-of-stock { opacity: 0.45; cursor: not-allowed; transform: none; }
+    .pc-menu-card:disabled { opacity: 0.45; cursor: not-allowed; transform: none; }
 
     .pc-card-thumb {
         height: 72px;
@@ -620,4 +623,20 @@
         .pc-main { grid-template-columns: 1fr; }
         .pc-right.pc-right-sidebar { display: none; }
     }
+
+    /* SweetAlert2 POS overrides */
+    .swal-popup-pos { border-radius: 16px !important; padding: 22px !important; font-family: 'Plus Jakarta Sans', system-ui, sans-serif !important; }
+    .swal-popup-pos .swal2-title { font-size: 18px !important; font-weight: 700 !important; color: #0f172a !important; }
+    .swal-popup-pos .swal2-html-container { margin: 8px 0 4px !important; }
+    .swal-popup-pos .swal2-actions { gap: 8px !important; margin-top: 14px !important; }
+    .swal-btn-primary, .swal-btn-ghost {
+        display: inline-flex !important; align-items: center !important; justify-content: center !important;
+        padding: 10px 16px !important; border-radius: 10px !important; font-size: 14px !important;
+        font-weight: 600 !important; cursor: pointer !important; border: 1px solid transparent !important;
+        transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+    }
+    .swal-btn-primary { background: #2563eb !important; color: #fff !important; }
+    .swal-btn-primary:hover { background: #1d4ed8 !important; }
+    .swal-btn-ghost { background: #fff !important; color: #1f2937 !important; border-color: #e2e8f0 !important; }
+    .swal-btn-ghost:hover { background: #f8fafc !important; }
 </style>

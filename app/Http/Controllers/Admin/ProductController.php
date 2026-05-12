@@ -42,13 +42,12 @@ class ProductController extends Controller
         $data = $request->validate([
             'nama_produk' => ['required', 'string', 'max:255'],
             'harga' => ['required', 'integer', 'min:0'],
-            'stok' => ['required', 'integer', 'min:0'],
             'kategori_id' => ['required', 'exists:categories,id'],
             'gambar' => ['nullable', 'image', 'max:2048'],
         ]);
 
         if ($request->hasFile('gambar')) {
-            $data['gambar'] = $request->file('gambar')->store('products', 'public');
+            $data['gambar'] = $request->file('gambar')->store('products', 'uploads');
         } else {
             unset($data['gambar']);
         }
@@ -70,16 +69,15 @@ class ProductController extends Controller
         $data = $request->validate([
             'nama_produk' => ['required', 'string', 'max:255'],
             'harga' => ['required', 'integer', 'min:0'],
-            'stok' => ['required', 'integer', 'min:0'],
             'kategori_id' => ['required', 'exists:categories,id'],
             'gambar' => ['nullable', 'image', 'max:2048'],
         ]);
 
         if ($request->hasFile('gambar')) {
             if ($product->gambar) {
-                Storage::disk('public')->delete($product->gambar);
+                Storage::disk('uploads')->delete($product->gambar);
             }
-            $data['gambar'] = $request->file('gambar')->store('products', 'public');
+            $data['gambar'] = $request->file('gambar')->store('products', 'uploads');
         } else {
             unset($data['gambar']);
         }
@@ -92,7 +90,7 @@ class ProductController extends Controller
     public function destroy(Product $product): RedirectResponse
     {
         if ($product->gambar) {
-            Storage::disk('public')->delete($product->gambar);
+            Storage::disk('uploads')->delete($product->gambar);
         }
         $product->delete();
 

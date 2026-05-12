@@ -19,13 +19,13 @@
         </style>
     </head>
     <body class="antialiased text-slate-900">
-        <div class="flex min-h-screen flex-col items-center justify-center bg-gradient-to-br from-teal-800 via-teal-700 to-slate-900 px-4 py-10">
+        <div class="flex min-h-screen flex-col items-center justify-center bg-gradient-to-br from-blue-800 via-blue-700 to-slate-900 px-4 py-10">
             <div class="mb-8 text-center">
                 <div class="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-white/15 text-lg font-bold text-white ring-1 ring-white/20">
                     X
                 </div>
                 <h1 class="text-xl font-bold text-white">{{ config('app.name', 'Starrich') }}</h1>
-                <p class="mt-1 text-sm text-teal-100/90">Masuk untuk melanjutkan</p>
+                <p class="mt-1 text-sm text-blue-100/90">Masuk untuk melanjutkan</p>
             </div>
 
             <div class="w-full max-w-md overflow-hidden rounded-3xl bg-white/95 p-6 shadow-2xl shadow-black/20 backdrop-blur sm:p-8">

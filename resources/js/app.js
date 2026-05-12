@@ -1,6 +1,9 @@
 import './bootstrap';
 
 import Alpine from 'alpinejs';
+import Swal from 'sweetalert2';
+
+window.Swal = Swal;
 
 document.addEventListener('alpine:init', () => {
     Alpine.store('toast', {
@@ -27,6 +30,7 @@ window.StarrichPos = function StarrichPos(payload) {
         products: payload.products,
         categories: payload.categories ?? [],
         checkoutUrl: payload.checkoutUrl,
+        invoiceUrlTemplate: payload.invoiceUrlTemplate || '',
         csrf: payload.csrf,
         search: '',
         categoryId: '',
@@ -142,23 +146,14 @@ window.StarrichPos = function StarrichPos(payload) {
         },
 
         addProduct(p) {
-            if (p.stok <= 0) {
-                Alpine.store('toast').show('Stok habis.', 'error');
-                return;
-            }
             const found = this.cart.find((c) => c.product_id === p.id);
             if (found) {
-                if (found.qty >= p.stok) {
-                    Alpine.store('toast').show('Qty melebihi stok.', 'error');
-                    return;
-                }
                 found.qty += 1;
             } else {
                 this.cart.push({
                     product_id: p.id,
                     nama_produk: p.nama_produk,
                     harga: p.harga,
-                    stok: p.stok,
                     qty: 1,
                     gambar: p.gambar,
                 });
@@ -169,14 +164,6 @@ window.StarrichPos = function StarrichPos(payload) {
         },
 
         inc(item) {
-            const p = this.products.find((x) => x.id === item.product_id);
-            if (! p) {
-                return;
-            }
-            if (item.qty >= p.stok) {
-                Alpine.store('toast').show('Qty melebihi stok.', 'error');
-                return;
-            }
             item.qty += 1;
         },
 
@@ -271,21 +258,65 @@ window.StarrichPos = function StarrichPos(payload) {
                     Alpine.store('toast').show(msg, 'error');
                     return;
                 }
-                this.cart.forEach((line) => {
-                    const p = this.products.find((x) => x.id === line.product_id);
-                    if (p) {
-                        p.stok -= line.qty;
-                    }
-                });
+                const trxId = data?.data?.transaction_id;
+                const total = data?.data?.total ?? this.cartTotal;
+                const bayar = data?.data?.bayar ?? paid;
+                const kembalian = data?.data?.kembalian ?? Math.max(0, bayar - total);
                 this.cart = [];
                 this.closePaymentModal();
                 this.paymentSplits = [{ metode: 'cash', jumlah: '' }];
-                Alpine.store('toast').show(data.message || 'Transaksi berhasil.', 'success');
+                this.showSuccessAlert({ trxId, total, bayar, kembalian });
             } catch {
                 Alpine.store('toast').show('Koneksi bermasalah.', 'error');
             } finally {
                 this.paying = false;
             }
+        },
+
+        showSuccessAlert({ trxId, total, bayar, kembalian }) {
+            const Swal = window.Swal;
+            if (! Swal) {
+                Alpine.store('toast').show('Transaksi berhasil.', 'success');
+                return;
+            }
+            const fmt = (n) => 'Rp ' + new Intl.NumberFormat('id-ID').format(Number(n) || 0);
+            const invoiceUrl = trxId && this.invoiceUrlTemplate
+                ? this.invoiceUrlTemplate.replace('__ID__', trxId)
+                : null;
+
+            Swal.fire({
+                icon: 'success',
+                title: 'Transaksi Berhasil',
+                html: `
+                    <div style="text-align:left;margin-top:8px;font-size:14px;color:#334155">
+                        ${trxId ? `<div style="display:flex;justify-content:space-between;padding:4px 0"><span>No. Transaksi</span><strong>#${String(trxId).padStart(5, '0')}</strong></div>` : ''}
+                        <div style="display:flex;justify-content:space-between;padding:4px 0;border-top:1px dashed #cbd5e1;margin-top:4px">
+                            <span>Total</span><strong>${fmt(total)}</strong>
+                        </div>
+                        <div style="display:flex;justify-content:space-between;padding:4px 0"><span>Bayar</span><strong>${fmt(bayar)}</strong></div>
+                        <div style="display:flex;justify-content:space-between;padding:4px 0;border-top:1px dashed #cbd5e1;margin-top:4px">
+                            <span>Kembalian</span><strong style="color:#16a34a">${fmt(kembalian)}</strong>
+                        </div>
+                    </div>
+                `,
+                showCancelButton: !! invoiceUrl,
+                showCloseButton: true,
+                confirmButtonText: 'Selesai',
+                cancelButtonText: 'Cetak invoice',
+                reverseButtons: true,
+                buttonsStyling: false,
+                customClass: {
+                    confirmButton: 'swal-btn-primary',
+                    cancelButton: 'swal-btn-ghost',
+                    popup: 'swal-popup-pos',
+                },
+                allowEnterKey: true,
+                focusConfirm: true,
+            }).then((result) => {
+                if (result.dismiss === Swal.DismissReason.cancel && invoiceUrl) {
+                    window.open(invoiceUrl + '?print=1', '_blank', 'noopener,width=420,height=720');
+                }
+            });
         },
     };
 };

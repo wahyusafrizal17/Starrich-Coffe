@@ -11,7 +11,7 @@
 >
     <div
         class="pointer-events-auto rounded-2xl px-4 py-3 text-center text-sm font-semibold shadow-lg ring-1 ring-black/5"
-        :class="$store.toast.variant === 'error' ? 'bg-red-600 text-white' : 'bg-teal-700 text-white'"
+        :class="$store.toast.variant === 'error' ? 'bg-red-600 text-white' : 'bg-blue-600 text-white'"
         x-text="$store.toast.message"
     ></div>
 </div>
