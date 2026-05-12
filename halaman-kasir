@@ -1,0 +1,685 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Kopi Senja — POS</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet" />
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --cream: #FAF6F0;
+    --warm-white: #FFFDF9;
+    --espresso: #2C1A0E;
+    --brown-dark: #4A2E1A;
+    --brown-mid: #7A4F2D;
+    --brown-light: #C49A72;
+    --caramel: #D4874A;
+    --caramel-light: #F2DCC0;
+    --sage: #5C6E5B;
+    --sage-light: #E8EDE7;
+    --border: rgba(44,26,14,0.12);
+    --shadow-sm: 0 2px 8px rgba(44,26,14,0.08);
+    --shadow-md: 0 8px 32px rgba(44,26,14,0.12);
+    --radius: 16px;
+    --radius-sm: 10px;
+  }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--cream);
+    color: var(--espresso);
+    height: 100vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ── TOP BAR ── */
+  header {
+    background: var(--espresso);
+    color: var(--caramel-light);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 28px;
+    height: 60px;
+    flex-shrink: 0;
+  }
+  header .brand {
+    font-family: 'Playfair Display', serif;
+    font-size: 20px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    color: var(--caramel-light);
+  }
+  header .brand span { color: var(--caramel); }
+  .header-meta {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    font-size: 13px;
+    font-weight: 300;
+    color: rgba(242,220,192,0.65);
+  }
+  .header-meta strong { color: var(--caramel-light); font-weight: 500; }
+  .cashier-badge {
+    background: rgba(212,135,74,0.2);
+    border: 1px solid rgba(212,135,74,0.35);
+    color: var(--caramel);
+    border-radius: 20px;
+    padding: 4px 14px;
+    font-size: 12px;
+    font-weight: 500;
+  }
+
+  /* ── LAYOUT ── */
+  .main {
+    display: grid;
+    grid-template-columns: 1fr 360px;
+    flex: 1;
+    overflow: hidden;
+  }
+
+  /* ── LEFT PANEL ── */
+  .left {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    padding: 24px 24px 24px 28px;
+    gap: 16px;
+  }
+
+  /* Category tabs */
+  .categories {
+    display: flex;
+    gap: 8px;
+    flex-shrink: 0;
+  }
+  .cat-btn {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    font-weight: 500;
+    padding: 8px 18px;
+    border-radius: 50px;
+    border: 1.5px solid var(--border);
+    background: var(--warm-white);
+    color: var(--brown-mid);
+    cursor: pointer;
+    transition: all 0.18s ease;
+  }
+  .cat-btn:hover { border-color: var(--brown-light); color: var(--brown-dark); }
+  .cat-btn.active {
+    background: var(--espresso);
+    color: var(--caramel-light);
+    border-color: var(--espresso);
+  }
+
+  /* Search */
+  .search-wrap {
+    position: relative;
+    flex-shrink: 0;
+  }
+  .search-wrap svg {
+    position: absolute;
+    left: 14px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--brown-light);
+    pointer-events: none;
+  }
+  .search-input {
+    width: 100%;
+    padding: 10px 14px 10px 40px;
+    border-radius: var(--radius-sm);
+    border: 1.5px solid var(--border);
+    background: var(--warm-white);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    color: var(--espresso);
+    outline: none;
+    transition: border-color 0.18s;
+  }
+  .search-input::placeholder { color: var(--brown-light); }
+  .search-input:focus { border-color: var(--caramel); }
+
+  /* Menu grid */
+  .menu-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 14px;
+    overflow-y: auto;
+    padding-right: 4px;
+    flex: 1;
+  }
+  .menu-grid::-webkit-scrollbar { width: 4px; }
+  .menu-grid::-webkit-scrollbar-track { background: transparent; }
+  .menu-grid::-webkit-scrollbar-thumb { background: var(--caramel-light); border-radius: 4px; }
+
+  .menu-card {
+    background: var(--warm-white);
+    border-radius: var(--radius);
+    border: 1.5px solid var(--border);
+    padding: 16px 14px 14px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    position: relative;
+    overflow: hidden;
+  }
+  .menu-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    background: var(--caramel);
+    transform: scaleX(0);
+    transition: transform 0.2s ease;
+  }
+  .menu-card:hover { border-color: var(--caramel); box-shadow: var(--shadow-md); transform: translateY(-2px); }
+  .menu-card:hover::before { transform: scaleX(1); }
+  .menu-card.out-of-stock { opacity: 0.45; cursor: not-allowed; }
+  .menu-card.out-of-stock:hover { transform: none; box-shadow: none; border-color: var(--border); }
+
+  .card-emoji { font-size: 32px; margin-bottom: 4px; }
+  .card-name { font-size: 14px; font-weight: 500; color: var(--espresso); line-height: 1.3; }
+  .card-desc { font-size: 11.5px; color: var(--brown-light); line-height: 1.4; }
+  .card-footer { display: flex; align-items: center; justify-content: space-between; margin-top: 4px; }
+  .card-price { font-size: 14px; font-weight: 500; color: var(--brown-dark); }
+  .card-tag {
+    font-size: 10px;
+    font-weight: 500;
+    padding: 3px 8px;
+    border-radius: 20px;
+    background: var(--sage-light);
+    color: var(--sage);
+  }
+  .card-tag.hot { background: #FEF2E8; color: #C4621A; }
+  .card-tag.cold { background: #EAF2F8; color: #1A5D8A; }
+
+  /* ── RIGHT PANEL ── */
+  .right {
+    background: var(--warm-white);
+    border-left: 1.5px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .order-header {
+    padding: 20px 22px 14px;
+    border-bottom: 1.5px solid var(--border);
+    flex-shrink: 0;
+  }
+  .order-header h2 {
+    font-family: 'Playfair Display', serif;
+    font-size: 18px;
+    font-weight: 500;
+    color: var(--espresso);
+  }
+  .order-meta { display: flex; align-items: center; gap: 10px; margin-top: 10px; }
+  .order-no {
+    font-size: 12px;
+    color: var(--brown-light);
+    font-weight: 400;
+  }
+  .order-type-btn {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 12px;
+    font-weight: 500;
+    padding: 4px 12px;
+    border-radius: 20px;
+    border: 1.5px solid var(--border);
+    background: transparent;
+    color: var(--brown-mid);
+    cursor: pointer;
+    transition: all 0.18s;
+  }
+  .order-type-btn.active {
+    background: var(--espresso);
+    color: var(--caramel-light);
+    border-color: var(--espresso);
+  }
+
+  /* Cart items */
+  .cart-items {
+    flex: 1;
+    overflow-y: auto;
+    padding: 12px 22px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .cart-items::-webkit-scrollbar { width: 3px; }
+  .cart-items::-webkit-scrollbar-thumb { background: var(--caramel-light); border-radius: 4px; }
+
+  .cart-empty {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    color: var(--brown-light);
+    font-size: 13px;
+  }
+  .cart-empty .empty-icon { font-size: 44px; opacity: 0.4; }
+
+  .cart-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 12px;
+    background: var(--cream);
+    border-radius: var(--radius-sm);
+    border: 1.5px solid var(--border);
+    animation: slideIn 0.2s ease;
+  }
+  @keyframes slideIn {
+    from { opacity: 0; transform: translateX(10px); }
+    to { opacity: 1; transform: translateX(0); }
+  }
+  .cart-item-emoji { font-size: 22px; }
+  .cart-item-info { flex: 1; min-width: 0; }
+  .cart-item-name { font-size: 13px; font-weight: 500; color: var(--espresso); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .cart-item-price { font-size: 12px; color: var(--brown-mid); }
+  .qty-ctrl { display: flex; align-items: center; gap: 6px; }
+  .qty-btn {
+    width: 26px; height: 26px;
+    border-radius: 50%;
+    border: 1.5px solid var(--border);
+    background: var(--warm-white);
+    cursor: pointer;
+    font-size: 16px;
+    display: flex; align-items: center; justify-content: center;
+    color: var(--brown-dark);
+    transition: all 0.15s;
+    line-height: 1;
+  }
+  .qty-btn:hover { background: var(--espresso); color: var(--caramel-light); border-color: var(--espresso); }
+  .qty-num { font-size: 14px; font-weight: 500; min-width: 20px; text-align: center; color: var(--espresso); }
+
+  /* Summary */
+  .order-summary {
+    border-top: 1.5px solid var(--border);
+    padding: 14px 22px 20px;
+    flex-shrink: 0;
+  }
+  .summary-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 13px;
+    color: var(--brown-mid);
+    padding: 3px 0;
+  }
+  .summary-row.total {
+    font-size: 16px;
+    font-weight: 500;
+    color: var(--espresso);
+    border-top: 1.5px solid var(--border);
+    margin-top: 8px;
+    padding-top: 10px;
+  }
+
+  /* Note */
+  .note-wrap { margin-bottom: 12px; }
+  .note-input {
+    width: 100%;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 12.5px;
+    color: var(--espresso);
+    background: var(--cream);
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 8px 12px;
+    resize: none;
+    outline: none;
+    transition: border-color 0.18s;
+    height: 52px;
+  }
+  .note-input::placeholder { color: var(--brown-light); }
+  .note-input:focus { border-color: var(--caramel); }
+
+  /* Payment */
+  .pay-methods { display: flex; gap: 8px; margin-bottom: 12px; }
+  .pay-btn {
+    flex: 1;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 12px;
+    font-weight: 500;
+    padding: 8px 6px;
+    border-radius: var(--radius-sm);
+    border: 1.5px solid var(--border);
+    background: var(--cream);
+    color: var(--brown-mid);
+    cursor: pointer;
+    transition: all 0.18s;
+    text-align: center;
+  }
+  .pay-btn:hover { border-color: var(--brown-light); }
+  .pay-btn.active { background: var(--espresso); color: var(--caramel-light); border-color: var(--espresso); }
+
+  .checkout-btn {
+    width: 100%;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 15px;
+    font-weight: 500;
+    padding: 14px;
+    border-radius: var(--radius);
+    background: var(--caramel);
+    color: white;
+    border: none;
+    cursor: pointer;
+    letter-spacing: 0.2px;
+    transition: all 0.2s ease;
+  }
+  .checkout-btn:hover { background: var(--brown-mid); transform: translateY(-1px); box-shadow: var(--shadow-md); }
+  .checkout-btn:active { transform: translateY(0); }
+  .checkout-btn:disabled { background: var(--caramel-light); color: var(--brown-light); cursor: not-allowed; transform: none; box-shadow: none; }
+
+  /* ── MODAL ── */
+  .modal-overlay {
+    position: fixed; inset: 0;
+    background: rgba(44,26,14,0.55);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 100;
+    opacity: 0; pointer-events: none;
+    transition: opacity 0.25s ease;
+  }
+  .modal-overlay.show { opacity: 1; pointer-events: all; }
+  .modal {
+    background: var(--warm-white);
+    border-radius: 24px;
+    padding: 36px 32px;
+    width: 340px;
+    text-align: center;
+    transform: scale(0.9);
+    transition: transform 0.25s ease;
+  }
+  .modal-overlay.show .modal { transform: scale(1); }
+  .modal-icon { font-size: 52px; margin-bottom: 12px; }
+  .modal h3 { font-family: 'Playfair Display', serif; font-size: 22px; font-weight: 500; color: var(--espresso); margin-bottom: 6px; }
+  .modal p { font-size: 14px; color: var(--brown-mid); line-height: 1.6; }
+  .modal-receipt { margin: 18px 0; background: var(--cream); border-radius: var(--radius-sm); padding: 14px 16px; text-align: left; font-size: 13px; color: var(--brown-dark); }
+  .modal-receipt div { display: flex; justify-content: space-between; padding: 2px 0; }
+  .modal-btns { display: flex; gap: 10px; margin-top: 20px; }
+  .modal-btn {
+    flex: 1;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    font-weight: 500;
+    padding: 12px;
+    border-radius: var(--radius-sm);
+    border: 1.5px solid var(--border);
+    background: var(--cream);
+    color: var(--brown-dark);
+    cursor: pointer;
+    transition: all 0.18s;
+  }
+  .modal-btn.primary { background: var(--espresso); color: var(--caramel-light); border-color: var(--espresso); }
+  .modal-btn:hover { opacity: 0.85; }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header>
+  <div class="brand">Kopi <span>Senja</span></div>
+  <div class="header-meta">
+    <span id="live-time"></span>
+    <span>Kasir: <strong>Rina Maharani</strong></span>
+    <span class="cashier-badge">Shift Sore</span>
+  </div>
+</header>
+
+<div class="main">
+
+  <!-- LEFT: MENU -->
+  <div class="left">
+    <div class="categories" id="cats">
+      <button class="cat-btn active" data-cat="all">Semua</button>
+      <button class="cat-btn" data-cat="hot">☕ Panas</button>
+      <button class="cat-btn" data-cat="cold">🧊 Dingin</button>
+      <button class="cat-btn" data-cat="nonkopi">🌿 Non-Kopi</button>
+      <button class="cat-btn" data-cat="food">🍞 Makanan</button>
+    </div>
+
+    <div class="search-wrap">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+      <input class="search-input" id="search" type="text" placeholder="Cari menu..." />
+    </div>
+
+    <div class="menu-grid" id="menu-grid"></div>
+  </div>
+
+  <!-- RIGHT: ORDER -->
+  <div class="right">
+    <div class="order-header">
+      <h2>Pesanan</h2>
+      <div class="order-meta">
+        <span class="order-no" id="order-no">#SJ-0042</span>
+        <button class="order-type-btn active" data-type="dine">Dine In</button>
+        <button class="order-type-btn" data-type="go">Take Away</button>
+      </div>
+    </div>
+
+    <div class="cart-items" id="cart-items">
+      <div class="cart-empty" id="cart-empty">
+        <div class="empty-icon">☕</div>
+        <span>Belum ada pesanan</span>
+        <span style="font-size:11.5px;opacity:0.7">Pilih menu untuk menambahkan</span>
+      </div>
+    </div>
+
+    <div class="order-summary">
+      <div class="note-wrap">
+        <textarea class="note-input" placeholder="Catatan pesanan (misal: kurang manis, es terpisah...)"></textarea>
+      </div>
+
+      <div class="summary-row"><span>Subtotal</span><span id="subtotal">Rp 0</span></div>
+      <div class="summary-row"><span>Pajak (10%)</span><span id="tax">Rp 0</span></div>
+      <div class="summary-row total"><span>Total</span><span id="total">Rp 0</span></div>
+
+      <div class="pay-methods" style="margin-top:12px">
+        <button class="pay-btn active" data-pay="cash">💵 Tunai</button>
+        <button class="pay-btn" data-pay="qris">📱 QRIS</button>
+        <button class="pay-btn" data-pay="card">💳 Kartu</button>
+      </div>
+
+      <button class="checkout-btn" id="checkout-btn" disabled>Proses Pembayaran</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL -->
+<div class="modal-overlay" id="modal">
+  <div class="modal">
+    <div class="modal-icon">✅</div>
+    <h3>Pembayaran Berhasil!</h3>
+    <p>Terima kasih telah berkunjung ke Kopi Senja.</p>
+    <div class="modal-receipt" id="modal-receipt"></div>
+    <div class="modal-btns">
+      <button class="modal-btn" id="modal-print">🖨 Cetak Struk</button>
+      <button class="modal-btn primary" id="modal-new">Pesanan Baru</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const menu = [
+  { id:1, name:'Espresso Classic', desc:'Double shot espresso segar', emoji:'☕', price:28000, cat:'hot', tag:'hot' },
+  { id:2, name:'Cappuccino', desc:'Espresso, susu steam & foam', emoji:'🫧', price:35000, cat:'hot', tag:'hot' },
+  { id:3, name:'Latte Art', desc:'Single shot dengan latte art', emoji:'🎨', price:38000, cat:'hot', tag:'hot' },
+  { id:4, name:'V60 Pour Over', desc:'Manual brew pilihan biji single origin', emoji:'♨️', price:42000, cat:'hot', tag:'hot' },
+  { id:5, name:'Americano Panas', desc:'Espresso diencerkan air panas', emoji:'🌫️', price:30000, cat:'hot', tag:'hot' },
+  { id:6, name:'Es Kopi Susu', desc:'Kopi susu segar es batu besar', emoji:'🧊', price:32000, cat:'cold', tag:'cold' },
+  { id:7, name:'Cold Brew', desc:'Seduh dingin 12 jam', emoji:'🫙', price:40000, cat:'cold', tag:'cold' },
+  { id:8, name:'Es Americano', desc:'Americano dingin over ice', emoji:'🥤', price:32000, cat:'cold', tag:'cold' },
+  { id:9, name:'Iced Latte', desc:'Latte segar dengan es batu', emoji:'🍦', price:38000, cat:'cold', tag:'cold' },
+  { id:10, name:'Matcha Latte', desc:'Matcha Jepang premium', emoji:'🍵', price:38000, cat:'nonkopi', tag:'new' },
+  { id:11, name:'Teh Tarik', desc:'Teh susu classic khas Malaysia', emoji:'🫖', price:25000, cat:'nonkopi', tag:'' },
+  { id:12, name:'Coklat Panas', desc:'Dark chocolate dengan susu', emoji:'🍫', price:33000, cat:'nonkopi', tag:'hot' },
+  { id:13, name:'Croissant', desc:'Butternya segar dari oven', emoji:'🥐', price:28000, cat:'food', tag:'' },
+  { id:14, name:'Roti Bakar', desc:'Roti sourdough dengan selai buatan sendiri', emoji:'🍞', price:22000, cat:'food', tag:'' },
+  { id:15, name:'Sandwich Ayam', desc:'Ayam panggang keju mozarella', emoji:'🥪', price:45000, cat:'food', tag:'best' },
+  { id:16, name:'Cake Coklat', desc:'Fudgy chocolate cake harian', emoji:'🍰', price:35000, cat:'food', tag:'' },
+];
+
+const fmt = n => 'Rp ' + n.toLocaleString('id-ID');
+let cart = [];
+let activeCategory = 'all';
+let activePayment = 'cash';
+let orderNum = 42;
+
+function renderMenu(filter = '') {
+  const grid = document.getElementById('menu-grid');
+  const q = filter.toLowerCase();
+  const items = menu.filter(m => {
+    const catOk = activeCategory === 'all' || m.cat === activeCategory;
+    const searchOk = !q || m.name.toLowerCase().includes(q) || m.desc.toLowerCase().includes(q);
+    return catOk && searchOk;
+  });
+  grid.innerHTML = items.map(m => `
+    <div class="menu-card" onclick="addItem(${m.id})" title="${m.name}">
+      <div class="card-emoji">${m.emoji}</div>
+      <div class="card-name">${m.name}</div>
+      <div class="card-desc">${m.desc}</div>
+      <div class="card-footer">
+        <div class="card-price">${fmt(m.price)}</div>
+        ${m.tag ? `<div class="card-tag ${m.tag}">${m.tag === 'hot' ? 'Panas' : m.tag === 'cold' ? 'Dingin' : m.tag === 'new' ? 'Baru' : m.tag === 'best' ? '⭐ Terlaris' : m.tag}</div>` : ''}
+      </div>
+    </div>
+  `).join('');
+}
+
+function addItem(id) {
+  const item = menu.find(m => m.id === id);
+  const existing = cart.find(c => c.id === id);
+  if (existing) { existing.qty++; }
+  else { cart.push({ ...item, qty: 1 }); }
+  renderCart();
+}
+
+function changeQty(id, delta) {
+  const idx = cart.findIndex(c => c.id === id);
+  if (idx === -1) return;
+  cart[idx].qty += delta;
+  if (cart[idx].qty <= 0) cart.splice(idx, 1);
+  renderCart();
+}
+
+function renderCart() {
+  const container = document.getElementById('cart-items');
+  const empty = document.getElementById('cart-empty');
+
+  if (cart.length === 0) {
+    container.innerHTML = '';
+    container.appendChild(Object.assign(document.createElement('div'), {className:'cart-empty', innerHTML:`<div class="empty-icon">☕</div><span>Belum ada pesanan</span><span style="font-size:11.5px;opacity:0.7">Pilih menu untuk menambahkan</span>`}));
+    updateSummary(0);
+    return;
+  }
+
+  container.innerHTML = cart.map(c => `
+    <div class="cart-item">
+      <div class="cart-item-emoji">${c.emoji}</div>
+      <div class="cart-item-info">
+        <div class="cart-item-name">${c.name}</div>
+        <div class="cart-item-price">${fmt(c.price)}</div>
+      </div>
+      <div class="qty-ctrl">
+        <button class="qty-btn" onclick="changeQty(${c.id},-1)">−</button>
+        <span class="qty-num">${c.qty}</span>
+        <button class="qty-btn" onclick="changeQty(${c.id},1)">+</button>
+      </div>
+    </div>
+  `).join('');
+
+  const subtotal = cart.reduce((s, c) => s + c.price * c.qty, 0);
+  updateSummary(subtotal);
+}
+
+function updateSummary(subtotal) {
+  const tax = Math.round(subtotal * 0.10);
+  const total = subtotal + tax;
+  document.getElementById('subtotal').textContent = fmt(subtotal);
+  document.getElementById('tax').textContent = fmt(tax);
+  document.getElementById('total').textContent = fmt(total);
+  document.getElementById('checkout-btn').disabled = subtotal === 0;
+}
+
+// Category buttons
+document.getElementById('cats').addEventListener('click', e => {
+  const btn = e.target.closest('.cat-btn');
+  if (!btn) return;
+  document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  activeCategory = btn.dataset.cat;
+  renderMenu(document.getElementById('search').value);
+});
+
+// Order type
+document.querySelectorAll('.order-type-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.order-type-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+  });
+});
+
+// Payment
+document.querySelectorAll('.pay-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.pay-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    activePayment = btn.dataset.pay;
+  });
+});
+
+// Search
+document.getElementById('search').addEventListener('input', e => renderMenu(e.target.value));
+
+// Checkout
+document.getElementById('checkout-btn').addEventListener('click', () => {
+  const subtotal = cart.reduce((s, c) => s + c.price * c.qty, 0);
+  const tax = Math.round(subtotal * 0.10);
+  const total = subtotal + tax;
+  const payLabel = { cash:'Tunai', qris:'QRIS', card:'Kartu Debit/Kredit' }[activePayment];
+  const orderType = document.querySelector('.order-type-btn.active').textContent;
+
+  document.getElementById('modal-receipt').innerHTML = `
+    <div style="font-weight:500;margin-bottom:8px;font-size:14px;">Kopi Senja</div>
+    ${cart.map(c=>`<div><span>${c.emoji} ${c.name} x${c.qty}</span><span>${fmt(c.price*c.qty)}</span></div>`).join('')}
+    <div style="border-top:1px dashed #C49A72;margin:8px 0;"></div>
+    <div><span>Subtotal</span><span>${fmt(subtotal)}</span></div>
+    <div><span>Pajak 10%</span><span>${fmt(tax)}</span></div>
+    <div style="font-weight:500"><span>Total</span><span>${fmt(total)}</span></div>
+    <div style="margin-top:8px;color:#7A4F2D"><span>Pembayaran</span><span>${payLabel}</span></div>
+    <div style="color:#7A4F2D"><span>Jenis</span><span>${orderType}</span></div>
+  `;
+  document.getElementById('modal').classList.add('show');
+});
+
+document.getElementById('modal-print').addEventListener('click', () => { alert('Mencetak struk... 🖨️'); });
+
+document.getElementById('modal-new').addEventListener('click', () => {
+  cart = [];
+  orderNum++;
+  document.getElementById('order-no').textContent = `#SJ-${String(orderNum).padStart(4,'0')}`;
+  document.getElementById('modal').classList.remove('show');
+  renderCart();
+});
+
+// Live clock
+function updateClock() {
+  const now = new Date();
+  document.getElementById('live-time').textContent = now.toLocaleTimeString('id-ID', {hour:'2-digit',minute:'2-digit'});
+}
+updateClock(); setInterval(updateClock, 1000);
+
+// Init
+renderMenu();
+</script>
+</body>
+</html>
