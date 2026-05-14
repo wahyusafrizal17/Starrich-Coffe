@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Category;
 use App\Models\Product;
+use Illuminate\Database\QueryException;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -89,10 +90,31 @@ class ProductController extends Controller
 
     public function destroy(Product $product): RedirectResponse
     {
-        if ($product->gambar) {
-            Storage::disk('uploads')->delete($product->gambar);
+        if ($product->transactionDetails()->exists()) {
+            return back()->with(
+                'error',
+                'Produk tidak dapat dihapus karena sudah pernah terjual (ada di riwayat transaksi). Laporan penjualan harus tetap konsisten. Anda bisa mengubah nama atau harga produk jika menu tidak lagi dijual.'
+            );
         }
-        $product->delete();
+
+        $gambarPath = $product->gambar;
+
+        try {
+            $product->delete();
+        } catch (QueryException $e) {
+            if (str_contains($e->getMessage(), 'Integrity constraint') || str_contains($e->getMessage(), '1451')) {
+                return back()->with(
+                    'error',
+                    'Produk tidak dapat dihapus karena masih terhubung ke data transaksi. Hapus tidak diizinkan agar laporan tetap akurat.'
+                );
+            }
+
+            throw $e;
+        }
+
+        if ($gambarPath) {
+            Storage::disk('uploads')->delete($gambarPath);
+        }
 
         return redirect()->route('admin.products.index')->with('success', 'Produk dihapus.');
     }
