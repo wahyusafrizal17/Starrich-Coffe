@@ -22,6 +22,7 @@ class Transaction extends Model
         'user_id',
         'status',
         'order_type',
+        'nama_pelanggan',
     ];
 
     protected function casts(): array
@@ -79,6 +80,7 @@ class Transaction extends Model
 
         return [
             'id' => $this->id,
+            'nama_pelanggan' => $this->nama_pelanggan,
             'total' => $this->total,
             'order_type' => $this->order_type,
             'created_at' => $this->created_at?->toIso8601String(),

@@ -82,6 +82,23 @@
         gap: 6px;
     }
     .pc-header-actions a svg { display: inline-block; }
+    .pc-header .brand { text-decoration: none; }
+    .pc-header-actions a.pc-nav-active {
+        background: rgba(255, 255, 255, 0.12);
+        border-color: rgba(191, 219, 254, 0.45);
+    }
+    .pc-header-badge {
+        min-width: 18px;
+        height: 18px;
+        padding: 0 5px;
+        border-radius: 999px;
+        background: #f59e0b;
+        color: #78350f;
+        font-size: 10px;
+        font-weight: 700;
+        line-height: 18px;
+        text-align: center;
+    }
     .pc-header-actions a:hover,
     .pc-header-actions button:hover { background: rgba(255,255,255,0.08); }
 
@@ -115,8 +132,9 @@
         flex-direction: column;
         overflow: hidden;
         padding: 20px 20px 20px 24px;
-        gap: 14px;
+        gap: 12px;
         min-width: 0;
+        min-height: 0;
     }
 
     .pc-categories {
@@ -176,13 +194,15 @@
 
     .pc-menu-grid {
         display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(158px, 1fr));
-        gap: 12px;
+        grid-template-columns: repeat(auto-fill, minmax(132px, 1fr));
+        gap: 10px;
         align-items: start;
         align-content: start;
         overflow-y: auto;
+        overflow-x: hidden;
         padding-right: 6px;
-        flex: 1;
+        padding-bottom: 8px;
+        flex: 1 1 0;
         min-height: 0;
     }
     .pc-menu-grid::-webkit-scrollbar { width: 4px; }
@@ -193,7 +213,7 @@
         background: var(--warm-white);
         border-radius: var(--radius);
         border: 1.5px solid var(--border);
-        padding: 10px 10px 9px;
+        padding: 8px 8px 7px;
         cursor: pointer;
         transition: all 0.2s ease;
         display: flex;
@@ -221,7 +241,7 @@
     .pc-menu-card:disabled { opacity: 0.45; cursor: not-allowed; transform: none; }
 
     .pc-card-thumb {
-        height: 100px;
+        height: 80px;
         width: 100%;
         border-radius: var(--radius-sm);
         background: var(--cream);
@@ -229,19 +249,19 @@
         align-items: center;
         justify-content: center;
         overflow: hidden;
-        margin-bottom: 4px;
+        margin-bottom: 3px;
         flex-shrink: 0;
-        padding: 6px;
+        padding: 4px;
     }
     .pc-card-thumb img {
-        width: 100%;
-        height: 100%;
+        width: auto;
+        height: auto;
         max-width: 100%;
         max-height: 100%;
         object-fit: contain;
         object-position: center;
     }
-    .pc-card-emoji { font-size: 32px; }
+    .pc-card-emoji { font-size: 26px; }
     .pc-card-name { font-size: 13px; font-weight: 500; color: var(--espresso); line-height: 1.3; }
     .pc-card-desc { font-size: 11px; color: var(--brown-light); line-height: 1.35; }
     .pc-card-footer {
@@ -475,6 +495,26 @@
         font-weight: 600;
         color: var(--brown-mid);
         margin: 0 0 8px;
+        display: block;
+    }
+    .pc-pay-modal-name-wrap {
+        margin-bottom: 14px;
+    }
+    .pc-pay-modal-name-input {
+        width: 100%;
+        font-family: inherit;
+        font-size: 13px;
+        font-weight: 500;
+        padding: 10px 12px;
+        border-radius: var(--radius-sm);
+        border: 1.5px solid var(--border);
+        background: var(--cream);
+        color: var(--espresso);
+    }
+    .pc-pay-modal-name-input::placeholder { color: var(--brown-light); }
+    .pc-pay-modal-name-input:focus {
+        outline: none;
+        border-color: var(--caramel);
     }
     .pc-split-row {
         display: flex;
@@ -609,52 +649,6 @@
         cursor: not-allowed;
     }
 
-    .pc-open-bills {
-        margin-bottom: 10px;
-        flex-shrink: 0;
-    }
-    .pc-open-bills-toggle {
-        width: 100%;
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        padding: 9px 12px;
-        border-radius: var(--radius-sm);
-        border: 1.5px solid #fcd34d;
-        background: #fffbeb;
-        color: #b45309;
-        font-family: inherit;
-        font-size: 13px;
-        font-weight: 600;
-        cursor: pointer;
-        transition: background 0.15s ease;
-    }
-    .pc-open-bills-toggle:hover { background: #fef3c7; }
-    .pc-open-bills-count {
-        margin-left: auto;
-        min-width: 22px;
-        height: 22px;
-        padding: 0 6px;
-        border-radius: 999px;
-        background: #f59e0b;
-        color: #fff;
-        font-size: 11px;
-        font-weight: 700;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-    }
-    .pc-open-bills-chevron { transition: transform 0.15s ease; margin-left: 4px; }
-    .pc-open-bills-chevron.is-open { transform: rotate(180deg); }
-    .pc-open-bills-list {
-        margin-top: 8px;
-        max-height: 200px;
-        overflow-y: auto;
-        display: flex;
-        flex-direction: column;
-        gap: 6px;
-        padding-right: 2px;
-    }
     .pc-open-bill-row {
         display: flex;
         align-items: center;
@@ -665,6 +659,15 @@
         background: var(--warm-white);
     }
     .pc-open-bill-info { flex: 1; min-width: 0; }
+    .pc-open-bill-name {
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--espresso);
+        margin: 0 0 2px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
     .pc-open-bill-id { font-size: 12px; font-weight: 700; color: var(--brown-dark); margin: 0; }
     .pc-open-bill-meta { font-size: 11px; color: var(--brown-mid); margin: 2px 0 0; }
     .pc-open-bill-preview {
@@ -688,12 +691,6 @@
         cursor: pointer;
     }
     .pc-open-bill-pay:hover { background: #1d4ed8; }
-    .pc-open-bills-empty {
-        margin: 8px 0 0;
-        font-size: 12px;
-        color: var(--brown-light);
-        text-align: center;
-    }
 
     .pc-checkout-btn {
         width: 100%;

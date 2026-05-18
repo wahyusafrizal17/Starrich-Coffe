@@ -23,7 +23,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::middleware('staff')->group(function () {
         Route::get('/kasir', [CashierController::class, 'index'])->name('cashier.index');
         Route::post('/kasir/checkout', [CashierController::class, 'checkout'])->name('cashier.checkout');
-        Route::get('/kasir/open-bills', [CashierController::class, 'openBills'])->name('cashier.open-bills');
+        Route::get('/kasir/open-bills', [CashierController::class, 'openBillsPage'])->name('cashier.open-bills');
+        Route::get('/kasir/open-bills/data', [CashierController::class, 'openBills'])->name('cashier.open-bills.data');
         Route::post('/kasir/open-bills/{transaction}/pay', [CashierController::class, 'payOpenBill'])->name('cashier.open-bills.pay');
         Route::get('/kasir/history', [CashierController::class, 'history'])->name('cashier.history');
         Route::get('/kasir/struk/{transaction}', [CashierController::class, 'invoice'])->name('cashier.invoice');

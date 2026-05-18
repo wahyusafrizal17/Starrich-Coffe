@@ -31,7 +31,38 @@ class CashierController extends Controller
         return view('cashier.index', [
             'categories' => $categories,
             'products' => $products,
-            'openBills' => $this->openBillsPayload(),
+            'openBillsCount' => $this->openBillsCount(),
+        ]);
+    }
+
+    public function openBillsPage(Request $request): View
+    {
+        $q = $request->string('q')->trim()->toString();
+
+        $base = Transaction::query()
+            ->open()
+            ->with(['user', 'details.product'])
+            ->latest();
+
+        if ($q !== '') {
+            $base->where(function ($qq) use ($q) {
+                $qq->where('id', $q)
+                    ->orWhere('nama_pelanggan', 'like', '%'.$q.'%')
+                    ->orWhereHas('user', fn ($u) => $u->where('name', 'like', '%'.$q.'%'));
+            });
+        }
+
+        $transactions = $base->get();
+        $sumTotal = (int) $transactions->sum('total');
+        $countBills = $transactions->count();
+
+        return view('cashier.open-bills', [
+            'transactions' => $transactions,
+            'openBillsPayload' => $transactions->map(fn (Transaction $t) => $t->toOpenBillArray())->values()->all(),
+            'sumTotal' => $sumTotal,
+            'countBills' => $countBills,
+            'q' => $q,
+            'openBillsCount' => $this->openBillsCount(),
         ]);
     }
 
@@ -60,6 +91,7 @@ class CashierController extends Controller
         if ($q !== '') {
             $base->where(function ($qq) use ($q) {
                 $qq->where('id', $q)
+                    ->orWhere('nama_pelanggan', 'like', '%'.$q.'%')
                     ->orWhereHas('user', fn ($u) => $u->where('name', 'like', '%'.$q.'%'));
             });
         }
@@ -79,6 +111,7 @@ class CashierController extends Controller
             'to' => $to,
             'q' => $q,
             'status' => $status,
+            'openBillsCount' => $this->openBillsCount(),
         ]);
     }
 
@@ -95,6 +128,7 @@ class CashierController extends Controller
         $data = $request->validate([
             'action' => ['nullable', 'string', 'in:pay,open_bill'],
             'order_type' => ['nullable', 'string', 'in:dine,take'],
+            'nama_pelanggan' => ['required_if:action,open_bill', 'nullable', 'string', 'max:100'],
             'items' => ['required', 'array', 'min:1'],
             'items.*.product_id' => ['required', 'integer', 'exists:products,id'],
             'items.*.qty' => ['required', 'integer', 'min:1'],
@@ -182,6 +216,7 @@ class CashierController extends Controller
                 'payment_splits' => null,
                 'status' => Transaction::STATUS_OPEN,
                 'order_type' => $data['order_type'] ?? null,
+                'nama_pelanggan' => trim($data['nama_pelanggan'] ?? ''),
                 'user_id' => $request->user()->id,
             ]);
 
@@ -313,6 +348,11 @@ class CashierController extends Controller
         }
 
         return $splits;
+    }
+
+    private function openBillsCount(): int
+    {
+        return Transaction::query()->open()->count();
     }
 
     /** @return list<array<string, mixed>> */

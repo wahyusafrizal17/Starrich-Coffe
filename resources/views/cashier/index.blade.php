@@ -11,10 +11,9 @@
             ->values()
             ->all(),
         'checkoutUrl' => route('cashier.checkout'),
-        'openBillsUrl' => route('cashier.open-bills'),
+        'openBillsUrl' => route('cashier.open-bills.data'),
         'payOpenBillUrlTemplate' => route('cashier.open-bills.pay', ['transaction' => '__ID__']),
         'invoiceUrlTemplate' => route('cashier.invoice', ['transaction' => '__ID__']),
-        'openBills' => $openBills,
         'csrf' => csrf_token(),
     ];
 @endphp
@@ -27,46 +26,10 @@
         x-data="StarrichPos({{ \Illuminate\Support\Js::from($posPayload) }})"
         x-on:keydown.escape.window="if (payModalOpen) { closePaymentModal(); } else { cartOpen = false }"
     >
-        <header class="pc-header">
-            <div class="brand">
-                <img
-                    src="{{ asset('images/logo/logo.png') }}"
-                    alt="Starrich Coffee &amp; Good Vibes"
-                    class="pc-header-logo"
-                    width="200"
-                    height="48"
-                    decoding="async"
-                    loading="eager"
-                />
-            </div>
-            <div class="pc-header-meta">
-                <span>Kasir: <strong>{{ auth()->user()->name }}</strong></span>
-                <div class="pc-header-actions">
-                    <a href="{{ route('cashier.history') }}" title="Riwayat pesanan">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 2m6-2a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/>
-                        </svg>
-                        History
-                    </a>
-                    @if (auth()->user()->isAdmin())
-                        <a href="{{ route('dashboard') }}">Admin</a>
-                    @endif
-                    <form method="POST" action="{{ route('logout') }}" class="inline">
-                        @csrf
-                        <button type="submit" class="pc-logout-btn" aria-label="Keluar">
-                            <svg class="pc-header-logout-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0 0 13.5 3h-6a2.25 2.25 0 0 0-2.25 2.25v13.5A2.25 2.25 0 0 0 7.5 21h6a2.25 2.25 0 0 0 2.25-2.25V15m3 0 3-3m0 0-3-3m3 3H9" />
-                            </svg>
-                        </button>
-                    </form>
-                </div>
-            </div>
-        </header>
+        @include('cashier._cashier-header', ['openBillsCount' => $openBillsCount])
 
         <div class="pc-main min-h-0 flex-1">
             <div class="pc-left">
-                @include('cashier._open-bills-panel')
-
                 <div class="pc-categories">
                     <button
                         type="button"

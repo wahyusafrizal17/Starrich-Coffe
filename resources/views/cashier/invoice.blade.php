@@ -75,6 +75,9 @@
             <div class="row"><span class="muted">No. Transaksi</span><strong>#{{ str_pad($transaction->id, 5, '0', STR_PAD_LEFT) }}</strong></div>
             <div class="row"><span class="muted">Tanggal</span><span>{{ $transaction->created_at->format('d/m/Y H:i') }}</span></div>
             <div class="row"><span class="muted">Kasir</span><span>{{ $transaction->user?->name ?? '—' }}</span></div>
+            @if ($transaction->nama_pelanggan)
+                <div class="row"><span class="muted">Pelanggan</span><span>{{ $transaction->nama_pelanggan }}</span></div>
+            @endif
             <div class="sep"></div>
 
             <div class="items">

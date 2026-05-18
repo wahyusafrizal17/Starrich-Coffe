@@ -34,7 +34,6 @@ window.StarrichPos = function StarrichPos(payload) {
         payOpenBillUrlTemplate: payload.payOpenBillUrlTemplate || '',
         invoiceUrlTemplate: payload.invoiceUrlTemplate || '',
         openBills: payload.openBills ?? [],
-        openBillsPanelOpen: false,
         settlingBill: null,
         csrf: payload.csrf,
         search: '',
@@ -44,6 +43,7 @@ window.StarrichPos = function StarrichPos(payload) {
         paying: false,
         orderType: 'dine',
         payModalOpen: false,
+        openBillName: '',
         paymentSplits: [{ metode: 'cash', jumlah: '' }],
 
         init() {
@@ -104,6 +104,7 @@ window.StarrichPos = function StarrichPos(payload) {
                 return;
             }
             this.settlingBill = null;
+            this.openBillName = '';
             this.initPaymentSplits(this.cartTotal);
             this.payModalOpen = true;
         },
@@ -127,6 +128,7 @@ window.StarrichPos = function StarrichPos(payload) {
         closePaymentModal() {
             this.payModalOpen = false;
             this.settlingBill = null;
+            this.openBillName = '';
         },
 
         syncOpenBills(list) {
@@ -260,6 +262,12 @@ window.StarrichPos = function StarrichPos(payload) {
                 return;
             }
 
+            const nama = this.openBillName.trim();
+            if (! nama) {
+                Alpine.store('toast').show('Isi nama pelanggan untuk open bill.', 'error');
+                return;
+            }
+
             this.paying = true;
             try {
                 const res = await fetch(this.checkoutUrl, {
@@ -268,6 +276,7 @@ window.StarrichPos = function StarrichPos(payload) {
                     body: JSON.stringify({
                         action: 'open_bill',
                         order_type: this.orderType,
+                        nama_pelanggan: nama,
                         items: this.cart.map((c) => ({
                             product_id: c.product_id,
                             qty: c.qty,
@@ -281,9 +290,9 @@ window.StarrichPos = function StarrichPos(payload) {
                 }
                 this.cart = [];
                 this.closePaymentModal();
+                this.openBillName = '';
                 this.paymentSplits = [{ metode: 'cash', jumlah: '' }];
                 this.syncOpenBills(data.open_bills);
-                this.openBillsPanelOpen = true;
                 Alpine.store('toast').show(data.message || 'Open bill disimpan.', 'success');
             } catch {
                 Alpine.store('toast').show('Koneksi bermasalah.', 'error');
@@ -372,6 +381,7 @@ window.StarrichPos = function StarrichPos(payload) {
                 const kembalian = data?.data?.kembalian ?? Math.max(0, bayar - trxTotal);
                 this.closePaymentModal();
                 this.paymentSplits = [{ metode: 'cash', jumlah: '' }];
+                this.openBills = this.openBills.filter((b) => b.id !== billId);
                 this.syncOpenBills(data.open_bills);
                 this.showSuccessAlert({ trxId, total: trxTotal, bayar, kembalian });
             } catch {
