@@ -79,12 +79,11 @@
                         @endphp
                         <div class="ch-row" x-show="openBills.some((b) => b.id === {{ $t->id }})">
                             <div>
-                                <p class="ch-id">#{{ str_pad($t->id, 5, '0', STR_PAD_LEFT) }}</p>
+                                <p class="ch-id">
+                                    #{{ str_pad($t->id, 5, '0', STR_PAD_LEFT) }}@if ($t->nama_pelanggan) / {{ $t->nama_pelanggan }}@endif
+                                </p>
                                 <p class="ch-trx-title">{{ $t->created_at->format('d M Y · H:i') }}</p>
                                 <p class="ch-trx-meta">Kasir: {{ $t->user?->name ?? '—' }}</p>
-                                @if ($t->nama_pelanggan)
-                                    <p class="ch-trx-title" style="margin-top:4px">{{ $t->nama_pelanggan }}</p>
-                                @endif
                             </div>
                             <div>
                                 <p class="ch-trx-meta">{{ $itemsLabel }} item</p>

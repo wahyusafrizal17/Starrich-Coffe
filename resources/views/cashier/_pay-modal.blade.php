@@ -21,7 +21,7 @@
             </div>
             <p class="pc-pay-modal-settle-hint" x-show="settlingBill" x-cloak>
                 No. <span x-text="settlingBill ? '#' + String(settlingBill.id).padStart(5, '0') : ''"></span>
-                <span x-show="settlingBill?.nama_pelanggan" x-text="settlingBill?.nama_pelanggan ? ' · ' + settlingBill.nama_pelanggan : ''"></span>
+                    <span x-show="settlingBill?.nama_pelanggan" x-text="settlingBill?.nama_pelanggan ? ' / ' + settlingBill.nama_pelanggan : ''"></span>
             </p>
         </header>
 
