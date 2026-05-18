@@ -84,11 +84,14 @@
             x-on:click.stop
         >
             <header class="pc-pay-modal-head">
-                <h3 id="pc-pay-modal-title" class="pc-pay-modal-title">Pembayaran</h3>
+                <h3 id="pc-pay-modal-title" class="pc-pay-modal-title" x-text="settlingBill ? 'Bayar Open Bill' : 'Pembayaran'"></h3>
                 <div class="pc-pay-modal-tagihan-block">
                     <span class="pc-pay-modal-tagihan-label">Tagihan</span>
-                    <strong class="pc-pay-modal-tagihan-amount" x-text="formatRp(cartTotal)"></strong>
+                    <strong class="pc-pay-modal-tagihan-amount" x-text="formatRp(payModalTotal)"></strong>
                 </div>
+                <p class="pc-pay-modal-settle-hint" x-show="settlingBill" x-cloak>
+                    No. <span x-text="settlingBill ? '#' + String(settlingBill.id).padStart(5, '0') : ''"></span>
+                </p>
             </header>
 
             <p class="pc-pay-modal-section-label">Metode & nominal</p>
@@ -136,8 +139,15 @@
             </div>
 
             <div class="pc-pay-modal-actions">
-                <button type="button" class="pc-pay-modal-cancel" x-on:click="closePaymentModal()">
-                    Batal
+                <button
+                    type="button"
+                    class="pc-pay-modal-open-bill"
+                    x-show="!settlingBill"
+                    x-on:click="submitOpenBill()"
+                    :disabled="paying"
+                >
+                    <span x-show="!paying">Open Bill</span>
+                    <span x-show="paying" x-cloak>Menyimpan…</span>
                 </button>
                 <button
                     type="button"
@@ -145,7 +155,7 @@
                     x-on:click="submitCheckout()"
                     :disabled="paying"
                 >
-                    <span x-show="!paying">Bayar</span>
+                    <span x-show="!paying" x-text="settlingBill ? 'Lunas' : 'Bayar'"></span>
                     <span x-show="paying" x-cloak>Memproses…</span>
                 </button>
             </div>

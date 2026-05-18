@@ -11,7 +11,10 @@
             ->values()
             ->all(),
         'checkoutUrl' => route('cashier.checkout'),
+        'openBillsUrl' => route('cashier.open-bills'),
+        'payOpenBillUrlTemplate' => route('cashier.open-bills.pay', ['transaction' => '__ID__']),
         'invoiceUrlTemplate' => route('cashier.invoice', ['transaction' => '__ID__']),
+        'openBills' => $openBills,
         'csrf' => csrf_token(),
     ];
 @endphp
@@ -62,6 +65,8 @@
 
         <div class="pc-main min-h-0 flex-1">
             <div class="pc-left">
+                @include('cashier._open-bills-panel')
+
                 <div class="pc-categories">
                     <button
                         type="button"

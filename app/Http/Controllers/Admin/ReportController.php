@@ -17,7 +17,8 @@ class ReportController extends Controller
         $from = $request->date('from') ?? now()->startOfMonth();
         $to = $request->date('to') ?? now()->endOfDay();
 
-        $base = Transaction::with(['user', 'details.product'])
+        $base = Transaction::paid()
+            ->with(['user', 'details.product'])
             ->whereBetween('created_at', [$from->copy()->startOfDay(), $to->copy()->endOfDay()]);
 
         $sumTotal = (int) (clone $base)->sum('total');
@@ -43,7 +44,8 @@ class ReportController extends Controller
             fwrite($out, "\xEF\xBB\xBF");
             fputcsv($out, ['ID', 'Tanggal', 'Kasir', 'Total', 'Bayar', 'Kembalian']);
 
-            Transaction::with('user')
+            Transaction::paid()
+                ->with('user')
                 ->whereBetween('created_at', [$from->copy()->startOfDay(), $to->copy()->endOfDay()])
                 ->oldest()
                 ->chunk(200, function ($rows) use ($out) {
@@ -71,7 +73,9 @@ class ReportController extends Controller
         $rangeStart = $from->copy()->startOfDay();
         $rangeEnd = $to->copy()->endOfDay();
 
-        $revenue = (int) Transaction::whereBetween('created_at', [$rangeStart, $rangeEnd])->sum('total');
+        $revenue = (int) Transaction::paid()
+            ->whereBetween('created_at', [$rangeStart, $rangeEnd])
+            ->sum('total');
 
         $expensesByCategory = Expense::query()
             ->whereBetween('tanggal', [$rangeStart, $rangeEnd])

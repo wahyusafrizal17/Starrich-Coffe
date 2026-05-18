@@ -30,7 +30,12 @@ window.StarrichPos = function StarrichPos(payload) {
         products: payload.products,
         categories: payload.categories ?? [],
         checkoutUrl: payload.checkoutUrl,
+        openBillsUrl: payload.openBillsUrl || '',
+        payOpenBillUrlTemplate: payload.payOpenBillUrlTemplate || '',
         invoiceUrlTemplate: payload.invoiceUrlTemplate || '',
+        openBills: payload.openBills ?? [],
+        openBillsPanelOpen: false,
+        settlingBill: null,
         csrf: payload.csrf,
         search: '',
         categoryId: '',
@@ -86,26 +91,48 @@ window.StarrichPos = function StarrichPos(payload) {
             return this.paymentSplits.reduce((s, r) => s + this.parseRupiahInput(r.jumlah), 0);
         },
 
+        get payModalTotal() {
+            return this.settlingBill ? Number(this.settlingBill.total) || 0 : this.cartTotal;
+        },
+
         get splitKembalian() {
-            return Math.max(0, this.splitPaidTotal - this.cartTotal);
+            return Math.max(0, this.splitPaidTotal - this.payModalTotal);
         },
 
         openPaymentModal() {
             if (this.cart.length === 0) {
                 return;
             }
-            const t = this.cartTotal;
+            this.settlingBill = null;
+            this.initPaymentSplits(this.cartTotal);
+            this.payModalOpen = true;
+        },
+
+        openSettleModal(bill) {
+            this.settlingBill = bill;
+            this.initPaymentSplits(bill.total);
+            this.payModalOpen = true;
+        },
+
+        initPaymentSplits(total) {
+            const t = Number(total) || 0;
             this.paymentSplits = [
                 {
                     metode: 'cash',
                     jumlah: t > 0 ? this.formatNominalInput(t) : '',
                 },
             ];
-            this.payModalOpen = true;
         },
 
         closePaymentModal() {
             this.payModalOpen = false;
+            this.settlingBill = null;
+        },
+
+        syncOpenBills(list) {
+            if (Array.isArray(list)) {
+                this.openBills = list;
+            }
         },
 
         addSplitRow() {
@@ -206,23 +233,30 @@ window.StarrichPos = function StarrichPos(payload) {
             row.jumlah = this.formatNominalInput(Number(digits));
         },
 
-        async submitCheckout() {
-            if (this.cart.length === 0) {
-                return;
-            }
-            const splits = this.paymentSplits
+        buildPaymentSplits() {
+            return this.paymentSplits
                 .map((row) => ({
                     metode: row.metode,
                     jumlah: Math.round(this.parseRupiahInput(row.jumlah)),
                 }))
                 .filter((row) => row.jumlah > 0);
+        },
+
+        validatePaymentSplits(splits, total) {
             if (splits.length === 0) {
                 Alpine.store('toast').show('Isi minimal satu nominal pembayaran.', 'error');
-                return;
+                return false;
             }
             const paid = splits.reduce((s, r) => s + r.jumlah, 0);
-            if (paid < this.cartTotal) {
+            if (paid < total) {
                 Alpine.store('toast').show('Total pembayaran kurang dari tagihan.', 'error');
+                return false;
+            }
+            return true;
+        },
+
+        async submitOpenBill() {
+            if (this.settlingBill || this.cart.length === 0) {
                 return;
             }
 
@@ -230,13 +264,61 @@ window.StarrichPos = function StarrichPos(payload) {
             try {
                 const res = await fetch(this.checkoutUrl, {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        Accept: 'application/json',
-                        'X-CSRF-TOKEN': this.csrf,
-                        'X-Requested-With': 'XMLHttpRequest',
-                    },
+                    headers: this.jsonHeaders(),
                     body: JSON.stringify({
+                        action: 'open_bill',
+                        order_type: this.orderType,
+                        items: this.cart.map((c) => ({
+                            product_id: c.product_id,
+                            qty: c.qty,
+                        })),
+                    }),
+                });
+                const data = await this.parseJsonResponse(res);
+                if (! res.ok) {
+                    Alpine.store('toast').show(this.errorMessage(data, 'Gagal menyimpan open bill.'), 'error');
+                    return;
+                }
+                this.cart = [];
+                this.closePaymentModal();
+                this.paymentSplits = [{ metode: 'cash', jumlah: '' }];
+                this.syncOpenBills(data.open_bills);
+                this.openBillsPanelOpen = true;
+                Alpine.store('toast').show(data.message || 'Open bill disimpan.', 'success');
+            } catch {
+                Alpine.store('toast').show('Koneksi bermasalah.', 'error');
+            } finally {
+                this.paying = false;
+            }
+        },
+
+        async submitCheckout() {
+            const splits = this.buildPaymentSplits();
+            const total = this.payModalTotal;
+
+            if (! this.validatePaymentSplits(splits, total)) {
+                return;
+            }
+
+            const paid = splits.reduce((s, r) => s + r.jumlah, 0);
+
+            if (this.settlingBill) {
+                await this.paySettlingBill(splits, total, paid);
+                return;
+            }
+
+            if (this.cart.length === 0) {
+                return;
+            }
+
+            this.paying = true;
+            try {
+                const res = await fetch(this.checkoutUrl, {
+                    method: 'POST',
+                    headers: this.jsonHeaders(),
+                    body: JSON.stringify({
+                        action: 'pay',
+                        order_type: this.orderType,
                         items: this.cart.map((c) => ({
                             product_id: c.product_id,
                             qty: c.qty,
@@ -244,33 +326,84 @@ window.StarrichPos = function StarrichPos(payload) {
                         payment_splits: splits,
                     }),
                 });
-                let data = {};
-                try {
-                    data = await res.json();
-                } catch {
-                    data = {};
-                }
+                const data = await this.parseJsonResponse(res);
                 if (! res.ok) {
-                    const msg =
-                        data?.message ||
-                        (data?.errors ? Object.values(data.errors).flat().join(' ') : null) ||
-                        'Transaksi gagal.';
-                    Alpine.store('toast').show(msg, 'error');
+                    Alpine.store('toast').show(this.errorMessage(data, 'Transaksi gagal.'), 'error');
                     return;
                 }
                 const trxId = data?.data?.transaction_id;
-                const total = data?.data?.total ?? this.cartTotal;
+                const trxTotal = data?.data?.total ?? total;
                 const bayar = data?.data?.bayar ?? paid;
-                const kembalian = data?.data?.kembalian ?? Math.max(0, bayar - total);
+                const kembalian = data?.data?.kembalian ?? Math.max(0, bayar - trxTotal);
                 this.cart = [];
                 this.closePaymentModal();
                 this.paymentSplits = [{ metode: 'cash', jumlah: '' }];
-                this.showSuccessAlert({ trxId, total, bayar, kembalian });
+                this.syncOpenBills(data.open_bills);
+                this.showSuccessAlert({ trxId, total: trxTotal, bayar, kembalian });
             } catch {
                 Alpine.store('toast').show('Koneksi bermasalah.', 'error');
             } finally {
                 this.paying = false;
             }
+        },
+
+        async paySettlingBill(splits, total, paid) {
+            const billId = this.settlingBill?.id;
+            if (! billId || ! this.payOpenBillUrlTemplate) {
+                return;
+            }
+
+            this.paying = true;
+            try {
+                const url = this.payOpenBillUrlTemplate.replace('__ID__', String(billId));
+                const res = await fetch(url, {
+                    method: 'POST',
+                    headers: this.jsonHeaders(),
+                    body: JSON.stringify({ payment_splits: splits }),
+                });
+                const data = await this.parseJsonResponse(res);
+                if (! res.ok) {
+                    Alpine.store('toast').show(this.errorMessage(data, 'Pembayaran gagal.'), 'error');
+                    return;
+                }
+                const trxId = data?.data?.transaction_id ?? billId;
+                const trxTotal = data?.data?.total ?? total;
+                const bayar = data?.data?.bayar ?? paid;
+                const kembalian = data?.data?.kembalian ?? Math.max(0, bayar - trxTotal);
+                this.closePaymentModal();
+                this.paymentSplits = [{ metode: 'cash', jumlah: '' }];
+                this.syncOpenBills(data.open_bills);
+                this.showSuccessAlert({ trxId, total: trxTotal, bayar, kembalian });
+            } catch {
+                Alpine.store('toast').show('Koneksi bermasalah.', 'error');
+            } finally {
+                this.paying = false;
+            }
+        },
+
+        jsonHeaders() {
+            return {
+                'Content-Type': 'application/json',
+                Accept: 'application/json',
+                'X-CSRF-TOKEN': this.csrf,
+                'X-Requested-With': 'XMLHttpRequest',
+            };
+        },
+
+        async parseJsonResponse(res) {
+            try {
+                return await res.json();
+            } catch {
+                return {};
+            }
+        },
+
+        errorMessage(data, fallback) {
+            return (
+                data?.message ||
+                (data?.errors ? Object.values(data.errors).flat().join(' ') : null) ||
+                fallback
+            );
         },
 
         showSuccessAlert({ trxId, total, bayar, kembalian }) {

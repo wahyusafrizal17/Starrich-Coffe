@@ -92,10 +92,14 @@
             <div class="totals">
                 <div class="row"><span>Subtotal</span><span>{{ number_format($transaction->total, 0, ',', '.') }}</span></div>
                 <div class="row grand"><span>TOTAL</span><span>Rp {{ number_format($transaction->total, 0, ',', '.') }}</span></div>
-                <div class="row"><span>Bayar</span><span>Rp {{ number_format($transaction->bayar, 0, ',', '.') }}</span></div>
-                <div class="row"><span>Kembalian</span><span>Rp {{ number_format($transaction->kembalian, 0, ',', '.') }}</span></div>
-
-                @if (is_array($transaction->payment_splits) && count($transaction->payment_splits) > 0)
+                @if ($transaction->isOpen())
+                    <div class="row" style="margin-top:8px;font-weight:700;color:#b45309">
+                        <span>Status</span><span>BELUM LUNAS (OPEN BILL)</span>
+                    </div>
+                @else
+                    <div class="row"><span>Bayar</span><span>Rp {{ number_format($transaction->bayar, 0, ',', '.') }}</span></div>
+                    <div class="row"><span>Kembalian</span><span>Rp {{ number_format($transaction->kembalian, 0, ',', '.') }}</span></div>
+                    @if (is_array($transaction->payment_splits) && count($transaction->payment_splits) > 0)
                     <div class="sep"></div>
                     <div class="muted" style="font-size:11px; margin-bottom:4px;">Metode pembayaran</div>
                     @foreach ($transaction->payment_splits as $split)
@@ -104,6 +108,7 @@
                             <span>Rp {{ number_format((int) ($split['jumlah'] ?? 0), 0, ',', '.') }}</span>
                         </div>
                     @endforeach
+                    @endif
                 @endif
             </div>
 

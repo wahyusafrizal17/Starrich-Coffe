@@ -15,10 +15,10 @@ class DashboardController extends Controller
         $today = Carbon::today();
         $monthStart = Carbon::now()->startOfMonth();
 
-        $todayTotal = (int) Transaction::whereDate('created_at', $today)->sum('total');
-        $todayCount = Transaction::whereDate('created_at', $today)->count();
+        $todayTotal = (int) Transaction::paid()->whereDate('created_at', $today)->sum('total');
+        $todayCount = Transaction::paid()->whereDate('created_at', $today)->count();
 
-        $monthlyTotal = (int) Transaction::where('created_at', '>=', $monthStart)->sum('total');
+        $monthlyTotal = (int) Transaction::paid()->where('created_at', '>=', $monthStart)->sum('total');
 
         $topProducts = TransactionDetail::query()
             ->select('product_id', DB::raw('SUM(qty) as qty_sold'))

@@ -25,7 +25,7 @@
         }
         .ch-card + .ch-card { margin-top: 14px; }
         .ch-card-pad-sm { padding: 14px 16px; }
-        .ch-grid-filter { display: grid; grid-template-columns: 1fr 1fr 1.4fr auto; gap: 10px; align-items: end; }
+        .ch-grid-filter { display: grid; grid-template-columns: 1fr 1fr 1.2fr 1fr auto; gap: 10px; align-items: end; }
         .ch-label { display: block; font-size: 11px; font-weight: 600; color: var(--brown-mid); margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.04em; }
         .ch-input, .ch-select {
             width: 100%; padding: 9px 12px; border-radius: 10px; border: 1px solid var(--caramel-light);
@@ -69,6 +69,7 @@
         .ch-row .ch-method.transfer { background: #ede9fe; color: #6d28d9; }
         .ch-row .ch-method.qris { background: #fef3c7; color: #b45309; }
         .ch-row .ch-method.split { background: #cffafe; color: #0e7490; }
+        .ch-row .ch-method.open_bill { background: #fef3c7; color: #b45309; }
         .ch-actions { display: flex; gap: 6px; justify-content: flex-end; }
         .ch-icon-btn {
             display: inline-flex; align-items: center; justify-content: center;
@@ -166,6 +167,14 @@
                         <label class="ch-label" for="q">Cari</label>
                         <input id="q" type="search" name="q" value="{{ $q }}" placeholder="No transaksi atau nama kasir…" class="ch-input" />
                     </div>
+                    <div>
+                        <label class="ch-label" for="status">Status</label>
+                        <select id="status" name="status" class="ch-input">
+                            <option value="">Semua</option>
+                            <option value="paid" @selected(($status ?? '') === 'paid')>Lunas</option>
+                            <option value="open" @selected(($status ?? '') === 'open')>Open Bill</option>
+                        </select>
+                    </div>
                     <button type="submit" class="ch-btn ch-btn-primary">Terapkan</button>
                 </form>
             </div>
@@ -178,6 +187,7 @@
                         @php
                             $itemsLabel = $t->details->sum('qty');
                             $method = $t->metode_pembayaran ?? 'cash';
+                            $methodLabel = $t->isOpen() ? 'OPEN BILL' : strtoupper($method);
                         @endphp
                         <div class="ch-row">
                             <div>
@@ -192,8 +202,8 @@
                                 </p>
                             </div>
                             <div>
-                                <span class="ch-method {{ in_array($method, ['cash','transfer','qris','split']) ? $method : '' }}">
-                                    {{ strtoupper($method) }}
+                                <span class="ch-method {{ $t->isOpen() ? 'open_bill' : (in_array($method, ['cash','transfer','qris','split','open_bill']) ? $method : '') }}">
+                                    {{ $methodLabel }}
                                 </span>
                             </div>
                             <div class="ch-total">{{ format_rupiah($t->total) }}</div>
