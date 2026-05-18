@@ -18,7 +18,7 @@
             .login-shell {
                 font-family: 'Plus Jakarta Sans', ui-sans-serif, system-ui, sans-serif;
                 -webkit-font-smoothing: antialiased;
-                min-height: 100vh;
+                min-height: 100dvh;
                 display: flex;
                 align-items: center;
                 justify-content: center;
@@ -31,7 +31,12 @@
                 background-position: 0% 0%, 0% 0%, 0% 0%, 0% 50%;
                 position: relative;
                 overflow-x: hidden;
-                padding: clamp(1rem, 4vw, 2.5rem);
+                overflow-y: auto;
+                padding:
+                    max(clamp(1.25rem, 4vh, 2.5rem), env(safe-area-inset-top))
+                    max(clamp(1rem, 3vw, 2rem), env(safe-area-inset-right))
+                    max(clamp(1.25rem, 4vh, 2.5rem), env(safe-area-inset-bottom))
+                    max(clamp(1rem, 3vw, 2rem), env(safe-area-inset-left));
                 animation: loginBgGradientDrift 18s ease-in-out infinite alternate;
             }
 
@@ -211,11 +216,13 @@
             .login-card {
                 width: min(100%, 980px);
                 min-height: auto;
+                flex-shrink: 0;
+                margin-block: auto;
                 background: #fff;
                 border-radius: 24px;
                 display: grid;
-                grid-template-columns: 1fr 1fr;
-                align-items: start;
+                grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+                align-items: stretch;
                 overflow: hidden;
                 position: relative;
                 z-index: 1;
@@ -444,27 +451,123 @@
                 }
             }
 
-            @media (max-width: 900px) {
+            /* Tablet & mobile: satu kolom, kartu lebih ramping */
+            @media (max-width: 1100px) {
+                .login-shell {
+                    align-items: center;
+                    justify-content: center;
+                }
+
                 .login-card {
                     grid-template-columns: 1fr;
-                    min-height: auto;
+                    width: min(100%, 520px);
+                    margin-inline: auto;
+                    border-radius: 20px;
                 }
+
                 .login-col-form {
                     order: 1;
-                    padding: 1.35rem 1.5rem 1rem;
+                    padding: clamp(1.35rem, 3.5vw, 1.75rem) clamp(1.25rem, 4vw, 1.75rem) clamp(1rem, 2.5vw, 1.25rem);
                 }
+
                 .login-col-visual {
                     order: 2;
-                    padding: 1.5rem 1.25rem 1.75rem;
-                    min-height: 200px;
+                    padding: clamp(1rem, 3vw, 1.35rem) clamp(1rem, 4vw, 1.5rem) clamp(1.25rem, 3vw, 1.75rem);
+                    min-height: 0;
+                    max-height: min(240px, 32vh);
                 }
+
+                .login-hero {
+                    max-width: 100%;
+                }
+
                 .login-hero .login-hero-img {
-                    max-height: min(380px, 55vh);
+                    max-height: min(220px, 30vh);
+                    width: auto;
+                    max-width: 100%;
+                    margin-inline: auto;
+                }
+
+                .login-logo-row {
+                    margin-bottom: clamp(1rem, 3vw, 1.35rem);
+                }
+
+                .login-logo-row .login-logo-img {
+                    height: clamp(72px, 14vw, 96px);
+                }
+            }
+
+            /* Tablet landscape: kartu tetap satu kolom, ilustrasi lebih ringkas */
+            @media (max-width: 1100px) and (min-width: 601px) {
+                .login-card {
+                    width: min(100%, 480px);
+                }
+
+                .login-col-visual {
+                    max-height: min(200px, 28vh);
+                }
+
+                .login-hero .login-hero-img {
+                    max-height: min(180px, 26vh);
+                }
+            }
+
+            /* Tablet landscape pendek (tinggi layar kecil) */
+            @media (max-width: 1100px) and (max-height: 720px) {
+                .login-col-visual {
+                    max-height: min(150px, 24vh);
+                    padding-top: 0.75rem;
+                    padding-bottom: 0.75rem;
+                }
+
+                .login-hero .login-hero-img {
+                    max-height: min(140px, 22vh);
+                }
+
+                .login-logo-row .login-logo-img {
+                    height: 64px;
+                }
+
+                .login-logo-row {
+                    margin-bottom: 0.85rem;
+                }
+
+                .login-field {
+                    margin-bottom: 12px;
+                }
+
+                .login-field input {
+                    padding-top: 13px;
+                    padding-bottom: 13px;
+                }
+
+                .login-remember {
+                    margin-bottom: 16px;
+                }
+
+                .login-btn {
+                    padding-top: 14px;
+                    padding-bottom: 14px;
                 }
             }
 
             @media (max-width: 600px) {
-                .login-col-form { padding-top: 1.25rem; }
+                .login-card {
+                    width: 100%;
+                    border-radius: 18px;
+                }
+
+                .login-col-form {
+                    padding: 1.25rem 1.15rem 1rem;
+                }
+
+                .login-col-visual {
+                    max-height: min(200px, 36vh);
+                }
+
+                .login-hero .login-hero-img {
+                    max-height: min(180px, 34vh);
+                }
             }
 
             [x-cloak] { display: none !important; }
