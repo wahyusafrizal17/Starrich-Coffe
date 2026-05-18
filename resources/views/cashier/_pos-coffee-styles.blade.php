@@ -241,27 +241,31 @@
     .pc-menu-card:disabled { opacity: 0.45; cursor: not-allowed; transform: none; }
 
     .pc-card-thumb {
+        position: relative;
         height: 80px;
         width: 100%;
         border-radius: var(--radius-sm);
         background: var(--cream);
-        display: flex;
-        align-items: center;
-        justify-content: center;
         overflow: hidden;
         margin-bottom: 3px;
         flex-shrink: 0;
-        padding: 4px;
     }
     .pc-card-thumb img {
-        width: auto;
-        height: auto;
-        max-width: 100%;
-        max-height: 100%;
-        object-fit: contain;
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
         object-position: center;
     }
-    .pc-card-emoji { font-size: 26px; }
+    .pc-card-emoji {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 26px;
+    }
     .pc-card-name { font-size: 13px; font-weight: 500; color: var(--espresso); line-height: 1.3; }
     .pc-card-desc { font-size: 11px; color: var(--brown-light); line-height: 1.35; }
     .pc-card-footer {
