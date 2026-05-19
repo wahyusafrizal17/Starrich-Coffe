@@ -1,4 +1,4 @@
-<div class="flex min-h-0 flex-1 flex-col">
+<div class="pc-cart-panel">
     <div class="pc-order-header">
         <h2>Pesanan</h2>
         <div class="pc-order-meta">
@@ -68,5 +68,4 @@
         </button>
     </div>
 
-    @include('cashier._pay-modal')
 </div>

@@ -1,6 +1,8 @@
 {{-- Gaya POS identik biru merek (logo), class prefix pc-* --}}
 <style>
     .pos-coffee {
+        height: 100svh;
+        max-height: 100svh;
         --cream: #eff6ff;
         --warm-white: #f8fafc;
         --espresso: #0a1628;
@@ -122,10 +124,11 @@
     .pc-main {
         display: grid;
         grid-template-columns: 1fr minmax(280px, 360px);
+        grid-template-rows: minmax(0, 1fr);
         flex: 1 1 0;
         overflow: hidden;
         min-height: 0;
-        max-height: 100%;
+        align-items: stretch;
     }
 
     .pc-left {
@@ -290,21 +293,23 @@
     .pc-right {
         background: var(--warm-white);
         border-left: 1.5px solid var(--border);
-        display: flex;
-        flex-direction: column;
         overflow: hidden;
         min-height: 0;
-        height: 100%;
-        max-height: 100%;
+        min-width: 0;
     }
 
-    .pc-right.pc-right-sidebar > div {
+  .pc-right.pc-right-sidebar {
+        display: flex;
+        flex-direction: column;
+    }
+
+    /* Panel pesanan: header + isi scroll + footer selalu terlihat */
+    .pc-cart-panel {
+        display: grid;
+        grid-template-rows: auto minmax(0, 1fr) auto;
         flex: 1 1 0;
         min-height: 0;
         height: 100%;
-        max-height: 100%;
-        display: flex;
-        flex-direction: column;
         overflow: hidden;
     }
 
@@ -353,8 +358,8 @@
     }
 
     .pc-cart-items {
-        flex: 1;
         overflow-y: auto;
+        overflow-x: hidden;
         padding: 10px 18px;
         display: flex;
         flex-direction: column;
@@ -365,18 +370,19 @@
     .pc-cart-items::-webkit-scrollbar-thumb { background: var(--caramel-light); border-radius: 4px; }
 
     .pc-cart-empty {
-        flex: 1;
+        flex: 1 1 auto;
+        min-height: 0;
         display: flex;
         flex-direction: column;
         align-items: center;
         justify-content: center;
-        gap: 8px;
+        gap: 6px;
         color: var(--brown-light);
         font-size: 13px;
         text-align: center;
-        padding: 24px 12px;
+        padding: 16px 12px;
     }
-    .pc-cart-empty .pc-empty-icon { font-size: 40px; opacity: 0.4; }
+    .pc-cart-empty .pc-empty-icon { font-size: 32px; opacity: 0.4; }
 
     .pc-cart-item {
         display: flex;
@@ -431,10 +437,9 @@
 
     .pc-order-summary {
         border-top: 1.5px solid var(--border);
-        padding: 12px 18px max(12px, env(safe-area-inset-bottom));
-        flex-shrink: 0;
-        margin-top: auto;
+        padding: 10px 18px max(10px, env(safe-area-inset-bottom, 0px));
         background: var(--warm-white);
+        box-shadow: 0 -8px 24px rgba(15, 23, 42, 0.06);
         z-index: 2;
     }
     .pc-summary-row {
@@ -750,10 +755,15 @@
 
     /* Tablet landscape dengan sidebar (1024px+) */
     @media (min-width: 1024px) and (max-width: 1366px) {
+        .pos-coffee {
+            height: 100svh;
+            max-height: 100svh;
+        }
+
         .pc-header {
-            height: 56px;
-            min-height: 56px;
-            max-height: 56px;
+            height: 52px;
+            min-height: 52px;
+            max-height: 52px;
         }
 
         .pc-header-meta {
@@ -768,20 +778,44 @@
         }
 
         .pc-main {
-            grid-template-columns: 1fr minmax(260px, 300px);
+            grid-template-columns: 1fr minmax(248px, 280px);
         }
 
         .pc-order-header {
-            padding: 14px 16px 10px;
+            padding: 12px 14px 8px;
+        }
+
+        .pc-order-header h2 {
+            font-size: 15px;
+        }
+
+        .pc-cart-items {
+            padding: 8px 14px;
+        }
+
+        .pc-cart-empty {
+            padding: 12px 8px;
+        }
+
+        .pc-cart-empty .pc-empty-icon {
+            font-size: 28px;
         }
 
         .pc-order-summary {
-            padding: 10px 16px max(14px, env(safe-area-inset-bottom));
+            padding: 8px 14px max(12px, env(safe-area-inset-bottom, 12px));
         }
 
         .pc-checkout-btn {
-            padding: 12px;
+            padding: 11px 14px;
             font-size: 13px;
+            margin-top: 8px !important;
+        }
+    }
+
+    @supports not (height: 100svh) {
+        .pos-coffee {
+            height: 100dvh;
+            max-height: 100dvh;
         }
     }
 

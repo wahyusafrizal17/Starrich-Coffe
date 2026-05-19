@@ -21,7 +21,7 @@
             body { font-family: 'DM Sans', ui-sans-serif, system-ui, sans-serif; }
         </style>
     </head>
-    <body class="h-full overflow-hidden bg-[#eff6ff] text-slate-900">
+    <body class="flex h-full min-h-0 flex-col overflow-hidden bg-[#eff6ff] text-slate-900">
         @include('partials.flash-bridge')
         @yield('content')
         @include('partials.toast')

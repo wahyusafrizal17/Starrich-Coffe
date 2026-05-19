@@ -22,7 +22,7 @@
     @include('cashier._pos-coffee-styles')
 
     <div
-        class="pos-coffee flex h-[100dvh] max-h-[100dvh] min-h-0 flex-col overflow-hidden"
+        class="pos-coffee flex min-h-0 flex-1 flex-col overflow-hidden"
         x-data="StarrichPos({{ \Illuminate\Support\Js::from($posPayload) }})"
         x-on:keydown.escape.window="if (payModalOpen) { closePaymentModal(); } else { cartOpen = false }"
     >
@@ -93,10 +93,12 @@
                 </p>
             </div>
 
-            <aside class="pc-right pc-right-sidebar hidden lg:flex lg:min-h-0 lg:h-full" aria-label="Keranjang">
+            <aside class="pc-right pc-right-sidebar hidden lg:flex" aria-label="Keranjang">
                 @include('cashier._cart-panel', ['mobile' => false])
             </aside>
         </div>
+
+        @include('cashier._pay-modal')
 
         {{-- Drawer mobile --}}
         <div class="fixed inset-0 z-50 lg:hidden" x-show="cartOpen" x-transition.opacity.duration.200ms x-cloak>
@@ -112,7 +114,7 @@
                 x-transition:leave-start="translate-x-0"
                 x-transition:leave-end="translate-x-full"
             >
-                <div class="relative min-h-0 flex-1 overflow-hidden pt-12">
+                <div class="relative flex min-h-0 flex-1 flex-col overflow-hidden pt-12">
                     <button
                         type="button"
                         class="absolute right-4 top-3 z-10 flex h-10 w-10 items-center justify-center rounded-full border text-xl font-medium"
