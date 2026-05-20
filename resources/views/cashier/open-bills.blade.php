@@ -9,8 +9,10 @@
         'checkoutUrl' => route('cashier.checkout'),
         'openBillsUrl' => route('cashier.open-bills.data'),
         'payOpenBillUrlTemplate' => route('cashier.open-bills.pay', ['transaction' => '__ID__']),
+        'deleteOpenBillUrlTemplate' => route('cashier.open-bills.destroy', ['transaction' => '__ID__']),
         'invoiceUrlTemplate' => route('cashier.invoice', ['transaction' => '__ID__']),
         'openBills' => $openBillsPayload,
+        'addonsCatalog' => [],
         'csrf' => csrf_token(),
     ];
 @endphp
@@ -37,7 +39,7 @@
                     </span>
                     <div class="min-w-0">
                         <p class="ch-stat-label">Total tagihan</p>
-                        <p class="ch-stat-value">{{ format_rupiah($sumTotal) }}</p>
+                        <p class="ch-stat-value" x-text="formatRp(openBills.reduce((s, b) => s + (Number(b.total) || 0), 0))">{{ format_rupiah($sumTotal) }}</p>
                     </div>
                 </div>
                 <div class="ch-card ch-card-pad-sm ch-stat">
@@ -46,7 +48,7 @@
                     </span>
                     <div class="min-w-0">
                         <p class="ch-stat-label">Jumlah open bill</p>
-                        <p class="ch-stat-value">{{ number_format($countBills, 0, ',', '.') }}</p>
+                        <p class="ch-stat-value" x-text="new Intl.NumberFormat('id-ID').format(openBills.length)">{{ number_format($countBills, 0, ',', '.') }}</p>
                     </div>
                 </div>
             </div>
@@ -71,7 +73,8 @@
             @if ($transactions->isEmpty())
                 <div class="ch-card ch-empty">Tidak ada open bill aktif.</div>
             @else
-                <div class="ch-list">
+                <div class="ch-card ch-empty" x-show="openBills.length === 0" x-cloak>Tidak ada open bill aktif.</div>
+                <div class="ch-list" x-show="openBills.length > 0">
                     @foreach ($transactions as $t)
                         @php
                             $itemsLabel = $t->details->sum('qty');
@@ -99,6 +102,15 @@
                             </div>
                             <div class="ch-total">{{ format_rupiah($t->total) }}</div>
                             <div class="ch-actions">
+                                <button
+                                    type="button"
+                                    class="ch-btn ch-btn-danger"
+                                    x-on:click="confirmDeleteOpenBill({{ \Illuminate\Support\Js::from($billPayload) }})"
+                                    :disabled="paying"
+                                >
+                                    Hapus
+                                </button>
+                                <a href="{{ route('cashier.index', ['edit' => $t->id]) }}" class="ch-btn ch-btn-ghost">Edit</a>
                                 <button
                                     type="button"
                                     class="ch-btn ch-btn-primary"

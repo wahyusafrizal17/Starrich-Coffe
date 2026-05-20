@@ -38,6 +38,9 @@
     .ch-btn-primary:disabled { opacity: 0.65; cursor: not-allowed; }
     .ch-btn-ghost { background: #fff; color: var(--brown-mid); border-color: var(--caramel-light); }
     .ch-btn-ghost:hover { background: var(--cream); }
+    .ch-btn-danger { background: #fff; color: #b91c1c; border-color: #fecaca; }
+    .ch-btn-danger:hover:not(:disabled) { background: #fef2f2; border-color: #f87171; color: #991b1b; }
+    .ch-btn-danger:disabled { opacity: 0.65; cursor: not-allowed; }
 
     .ch-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 14px; }
     .ch-stat { display: flex; align-items: center; gap: 12px; padding: 14px 16px; }
@@ -68,7 +71,7 @@
     .ch-row .ch-method.qris { background: #fef3c7; color: #b45309; }
     .ch-row .ch-method.split { background: #cffafe; color: #0e7490; }
     .ch-row .ch-method.open_bill { background: #fef3c7; color: #b45309; }
-    .ch-actions { display: flex; gap: 6px; justify-content: flex-end; }
+    .ch-actions { display: flex; flex-wrap: wrap; gap: 6px; justify-content: flex-end; }
     .ch-icon-btn {
         display: inline-flex; align-items: center; justify-content: center;
         width: 34px; height: 34px; border-radius: 10px; border: 1px solid var(--caramel-light);

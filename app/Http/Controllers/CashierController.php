@@ -6,9 +6,11 @@ use App\Models\Category;
 use App\Models\Product;
 use App\Models\Transaction;
 use App\Models\TransactionDetail;
+use App\Support\OrderAddonCatalog;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
@@ -26,11 +28,23 @@ class CashierController extends Controller
                 'harga' => $p->harga,
                 'kategori_id' => $p->kategori_id,
                 'gambar' => $p->imageUrl(),
+                'suhu_pilihan' => $p->requiresSuhuPilihan(),
+                'addon_pilihan' => $p->allowsOrderAddons(),
             ]);
+
+        $addonsCatalog = collect(OrderAddonCatalog::definitions())
+            ->map(fn (array $meta, string $code) => [
+                'code' => $code,
+                'label' => $meta['label'] ?? $code,
+                'harga' => (int) ($meta['harga'] ?? 0),
+            ])
+            ->values()
+            ->all();
 
         return view('cashier.index', [
             'categories' => $categories,
             'products' => $products,
+            'addonsCatalog' => $addonsCatalog,
             'openBillsCount' => $this->openBillsCount(),
         ]);
     }
@@ -132,6 +146,9 @@ class CashierController extends Controller
             'items' => ['required', 'array', 'min:1'],
             'items.*.product_id' => ['required', 'integer', 'exists:products,id'],
             'items.*.qty' => ['required', 'integer', 'min:1'],
+            'items.*.suhu' => ['nullable', 'string', 'in:ice,hot'],
+            'items.*.addons' => ['nullable', 'array'],
+            'items.*.addons.*' => ['string', Rule::in(OrderAddonCatalog::validCodes())],
             'payment_splits' => ['nullable', 'array'],
             'payment_splits.*.metode' => ['required_with:payment_splits', 'string', 'in:qris,transfer,cash'],
             'payment_splits.*.jumlah' => ['required_with:payment_splits', 'integer', 'min:0'],
@@ -144,6 +161,106 @@ class CashierController extends Controller
         }
 
         return $this->storePaidCheckout($request, $data);
+    }
+
+    public function openBillEditData(Transaction $transaction): JsonResponse
+    {
+        if (! $transaction->isOpen()) {
+            return response()->json([
+                'ok' => false,
+                'message' => 'Tagihan ini sudah lunas atau bukan open bill.',
+            ], 422);
+        }
+
+        $transaction->load(['details.product']);
+
+        $items = $transaction->details->map(function (TransactionDetail $d) {
+            $product = $d->product;
+
+            return [
+                'product_id' => $d->product_id,
+                'nama_produk' => $product?->nama_produk ?? '—',
+                'harga' => (int) $d->harga,
+                'qty' => (int) $d->qty,
+                'gambar' => $product?->imageUrl(),
+                'suhu' => $d->suhu,
+                'addons' => $d->addons ?? [],
+            ];
+        })->values()->all();
+
+        return response()->json([
+            'ok' => true,
+            'data' => [
+                'id' => $transaction->id,
+                'nama_pelanggan' => $transaction->nama_pelanggan,
+                'order_type' => $transaction->order_type ?? 'dine',
+                'items' => $items,
+            ],
+        ]);
+    }
+
+    public function updateOpenBill(Request $request, Transaction $transaction): JsonResponse
+    {
+        if (! $transaction->isOpen()) {
+            return response()->json([
+                'ok' => false,
+                'message' => 'Tagihan ini sudah lunas atau bukan open bill.',
+            ], 422);
+        }
+
+        $data = $request->validate([
+            'order_type' => ['nullable', 'string', 'in:dine,take'],
+            'items' => ['required', 'array', 'min:1'],
+            'items.*.product_id' => ['required', 'integer', 'exists:products,id'],
+            'items.*.qty' => ['required', 'integer', 'min:1'],
+            'items.*.suhu' => ['nullable', 'string', 'in:ice,hot'],
+            'items.*.addons' => ['nullable', 'array'],
+            'items.*.addons.*' => ['string', Rule::in(OrderAddonCatalog::validCodes())],
+        ]);
+
+        $result = DB::transaction(function () use ($data, $transaction) {
+            [$total, $prepared] = $this->prepareLineItems($data['items']);
+
+            $transaction->details()->delete();
+            $this->createTransactionDetails($transaction, $prepared);
+
+            $transaction->update([
+                'total' => $total,
+                'order_type' => $data['order_type'] ?? $transaction->order_type,
+            ]);
+
+            return [
+                'transaction_id' => $transaction->id,
+                'total' => $total,
+            ];
+        });
+
+        return response()->json([
+            'ok' => true,
+            'message' => 'Open bill diperbarui.',
+            'data' => $result,
+            'open_bills' => $this->openBillsPayload(),
+        ]);
+    }
+
+    public function destroyOpenBill(Transaction $transaction): JsonResponse
+    {
+        if (! $transaction->isOpen()) {
+            return response()->json([
+                'ok' => false,
+                'message' => 'Tagihan ini sudah lunas atau bukan open bill.',
+            ], 422);
+        }
+
+        DB::transaction(function () use ($transaction) {
+            $transaction->delete();
+        });
+
+        return response()->json([
+            'ok' => true,
+            'message' => 'Open bill dihapus.',
+            'open_bills' => $this->openBillsPayload(),
+        ]);
     }
 
     public function payOpenBill(Request $request, Transaction $transaction): JsonResponse
@@ -287,23 +404,45 @@ class CashierController extends Controller
     }
 
     /**
-     * @param  array<int, array{product_id: int, qty: int}>  $items
-     * @return array{0: int, 1: list<array{product: Product, qty: int, subtotal: int}>}
+     * @param  array<int, array{product_id: int, qty: int, suhu?: string|null, addons?: array<int, string>|null}>  $items
+     * @return array{0: int, 1: list<array{product: Product, qty: int, subtotal: int, suhu: string|null, addons: list<string>, unit_harga: int}>}
      */
     private function prepareLineItems(array $items): array
     {
         $total = 0;
         $prepared = [];
 
-        foreach ($items as $line) {
+        foreach ($items as $index => $line) {
             /** @var Product $product */
-            $product = Product::query()->findOrFail($line['product_id']);
-            $subtotal = $product->harga * $line['qty'];
+            $product = Product::query()->with('category')->findOrFail($line['product_id']);
+
+            $addonsNorm = OrderAddonCatalog::normalize($line['addons'] ?? null);
+            if (! $product->allowsOrderAddons()) {
+                $addonsNorm = [];
+            }
+
+            $addonExtra = OrderAddonCatalog::extraPriceForCodes($addonsNorm);
+            $unitHarga = $product->harga + $addonExtra;
+            $subtotal = $unitHarga * $line['qty'];
             $total += $subtotal;
+
+            $raw = $line['suhu'] ?? null;
+            $suhu = is_string($raw) && in_array($raw, ['ice', 'hot'], true) ? $raw : null;
+            if (! $product->requiresSuhuPilihan()) {
+                $suhu = null;
+            } elseif ($suhu === null) {
+                throw ValidationException::withMessages([
+                    "items.{$index}.suhu" => 'Pilih Ice atau Hot untuk menu ini.',
+                ]);
+            }
+
             $prepared[] = [
                 'product' => $product,
                 'qty' => $line['qty'],
                 'subtotal' => $subtotal,
+                'suhu' => $suhu,
+                'addons' => $addonsNorm,
+                'unit_harga' => $unitHarga,
             ];
         }
 
@@ -311,7 +450,7 @@ class CashierController extends Controller
     }
 
     /**
-     * @param  list<array{product: Product, qty: int, subtotal: int}>  $prepared
+     * @param  list<array{product: Product, qty: int, subtotal: int, suhu: string|null, addons: list<string>, unit_harga: int}>  $prepared
      */
     private function createTransactionDetails(Transaction $transaction, array $prepared): void
     {
@@ -319,8 +458,10 @@ class CashierController extends Controller
             TransactionDetail::create([
                 'transaction_id' => $transaction->id,
                 'product_id' => $row['product']->id,
+                'suhu' => $row['suhu'],
+                'addons' => $row['addons'] === [] ? null : $row['addons'],
                 'qty' => $row['qty'],
-                'harga' => $row['product']->harga,
+                'harga' => $row['unit_harga'],
                 'subtotal' => $row['subtotal'],
             ]);
         }

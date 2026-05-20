@@ -22,7 +22,7 @@
     </div>
 
     <div class="pc-cart-items">
-        <template x-for="item in cart" :key="item.product_id">
+        <template x-for="item in cart" :key="String(item.product_id) + '-' + (item.suhu || '') + '-' + addonsKey(item)">
             <div class="pc-cart-item">
                 <div class="pc-cart-thumb">
                     <img x-show="item.gambar" :src="item.gambar" alt="" loading="lazy" />
@@ -30,6 +30,13 @@
                 </div>
                 <div class="pc-cart-info">
                     <div class="pc-cart-name" x-text="item.nama_produk"></div>
+                    <span
+                        class="pc-cart-suhu"
+                        x-show="item.suhu === 'ice' || item.suhu === 'hot'"
+                        x-text="item.suhu === 'ice' ? 'Ice' : 'Hot'"
+                        x-cloak
+                    ></span>
+                    <span class="pc-cart-addons" x-show="formatAddonsLine(item)" x-text="formatAddonsLine(item)" x-cloak></span>
                     <div class="pc-cart-price" x-text="formatRp(item.harga)"></div>
                 </div>
                 <div class="pc-qty-ctrl">

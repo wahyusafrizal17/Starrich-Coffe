@@ -38,4 +38,21 @@ class Product extends Model
     {
         return $this->gambar ? asset('uploads/'.$this->gambar) : null;
     }
+
+    /** Menu minuman/kopi: perlu pilih Ice/Hot di kasir. */
+    public function requiresSuhuPilihan(): bool
+    {
+        $nama = mb_strtolower($this->category?->nama_kategori ?? '');
+
+        return (bool) preg_match(
+            '/minuman|kopi|coffee|teh|latte|espresso|brew|jus|juice|soda|matcha|milk|drink|mocktail|mocha|frappe|shake|americano|cappuccino|bubble/i',
+            $nama
+        );
+    }
+
+    /** Biji / susu tambahan — sama cakupan kategori dengan suhu (minuman/kopi). */
+    public function allowsOrderAddons(): bool
+    {
+        return $this->requiresSuhuPilihan();
+    }
 }

@@ -10,6 +10,8 @@ class TransactionDetail extends Model
     protected $fillable = [
         'transaction_id',
         'product_id',
+        'suhu',
+        'addons',
         'qty',
         'harga',
         'subtotal',
@@ -18,6 +20,7 @@ class TransactionDetail extends Model
     protected function casts(): array
     {
         return [
+            'addons' => 'array',
             'qty' => 'integer',
             'harga' => 'integer',
             'subtotal' => 'integer',

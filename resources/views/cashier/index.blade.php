@@ -13,7 +13,11 @@
         'checkoutUrl' => route('cashier.checkout'),
         'openBillsUrl' => route('cashier.open-bills.data'),
         'payOpenBillUrlTemplate' => route('cashier.open-bills.pay', ['transaction' => '__ID__']),
+        'deleteOpenBillUrlTemplate' => route('cashier.open-bills.destroy', ['transaction' => '__ID__']),
+        'openBillEditDataUrlTemplate' => route('cashier.open-bills.edit-data', ['transaction' => '__ID__']),
+        'updateOpenBillUrlTemplate' => route('cashier.open-bills.update', ['transaction' => '__ID__']),
         'invoiceUrlTemplate' => route('cashier.invoice', ['transaction' => '__ID__']),
+        'addonsCatalog' => $addonsCatalog,
         'csrf' => csrf_token(),
     ];
 @endphp
@@ -24,12 +28,32 @@
     <div
         class="pos-coffee flex min-h-0 flex-1 flex-col overflow-hidden"
         x-data="StarrichPos({{ \Illuminate\Support\Js::from($posPayload) }})"
-        x-on:keydown.escape.window="if (payModalOpen) { closePaymentModal(); } else { cartOpen = false }"
+        x-on:keydown.escape.window="if (addonModalOpen) { closeAddonModal(); } else if (varianModalOpen) { closeVarianModal(); } else if (payModalOpen) { closePaymentModal(); } else { cartOpen = false }"
     >
         @include('cashier._cashier-header', ['openBillsCount' => $openBillsCount])
 
         <div class="pc-main min-h-0 flex-1">
             <div class="pc-left">
+                <div
+                    class="pc-edit-open-bill-banner"
+                    x-show="editingOpenBillId"
+                    x-cloak
+                    role="status"
+                >
+                    <div class="pc-edit-open-bill-text">
+                        <strong>Mengedit open bill</strong>
+                        <span x-text="'#' + String(editingOpenBillId).padStart(5, '0') + (openBillName ? ' / ' + openBillName : '')"></span>
+                    </div>
+                    <div class="pc-edit-open-bill-actions">
+                        <button type="button" class="pc-edit-open-bill-save" x-on:click="saveOpenBillEdits()" :disabled="paying || cart.length === 0">
+                            Simpan perubahan
+                        </button>
+                        <button type="button" class="pc-edit-open-bill-cancel" x-on:click="cancelOpenBillEdit()" :disabled="paying">
+                            Batal
+                        </button>
+                    </div>
+                </div>
+
                 <div class="pc-categories">
                     <button
                         type="button"
@@ -99,6 +123,8 @@
         </div>
 
         @include('cashier._pay-modal')
+        @include('cashier._varian-suhu-modal')
+        @include('cashier._addon-modal')
 
         {{-- Drawer mobile --}}
         <div class="fixed inset-0 z-50 lg:hidden" x-show="cartOpen" x-transition.opacity.duration.200ms x-cloak>

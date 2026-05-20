@@ -25,7 +25,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('/kasir/checkout', [CashierController::class, 'checkout'])->name('cashier.checkout');
         Route::get('/kasir/open-bills', [CashierController::class, 'openBillsPage'])->name('cashier.open-bills');
         Route::get('/kasir/open-bills/data', [CashierController::class, 'openBills'])->name('cashier.open-bills.data');
+        Route::get('/kasir/open-bills/{transaction}/edit-data', [CashierController::class, 'openBillEditData'])->name('cashier.open-bills.edit-data');
+        Route::put('/kasir/open-bills/{transaction}', [CashierController::class, 'updateOpenBill'])->name('cashier.open-bills.update');
         Route::post('/kasir/open-bills/{transaction}/pay', [CashierController::class, 'payOpenBill'])->name('cashier.open-bills.pay');
+        Route::delete('/kasir/open-bills/{transaction}', [CashierController::class, 'destroyOpenBill'])->name('cashier.open-bills.destroy');
         Route::get('/kasir/history', [CashierController::class, 'history'])->name('cashier.history');
         Route::get('/kasir/struk/{transaction}', [CashierController::class, 'invoice'])->name('cashier.invoice');
     });

@@ -14,7 +14,7 @@
         x-on:click.stop
     >
         <header class="pc-pay-modal-head">
-            <h3 id="pc-pay-modal-title" class="pc-pay-modal-title" x-text="settlingBill ? 'Bayar Open Bill' : 'Pembayaran'"></h3>
+            <h3 id="pc-pay-modal-title" class="pc-pay-modal-title" x-text="settlingBill ? 'Bayar Open Bill' : (editingOpenBillId ? 'Bayar (edit open bill)' : 'Pembayaran')"></h3>
             <div class="pc-pay-modal-tagihan-block">
                 <span class="pc-pay-modal-tagihan-label">Tagihan</span>
                 <strong class="pc-pay-modal-tagihan-amount" x-text="formatRp(payModalTotal)"></strong>
@@ -25,7 +25,7 @@
             </p>
         </header>
 
-        <div class="pc-pay-modal-name-wrap" x-show="!settlingBill" x-cloak>
+        <div class="pc-pay-modal-name-wrap" x-show="!settlingBill && !editingOpenBillId" x-cloak>
             <label class="pc-pay-modal-section-label" for="pc-open-bill-name">Nama pelanggan</label>
             <input
                 id="pc-open-bill-name"
@@ -86,7 +86,7 @@
             <button
                 type="button"
                 class="pc-pay-modal-open-bill"
-                x-show="!settlingBill"
+                x-show="!settlingBill && !editingOpenBillId"
                 x-on:click="submitOpenBill()"
                 :disabled="paying"
             >

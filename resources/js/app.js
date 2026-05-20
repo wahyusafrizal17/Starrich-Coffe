@@ -32,9 +32,13 @@ window.StarrichPos = function StarrichPos(payload) {
         checkoutUrl: payload.checkoutUrl,
         openBillsUrl: payload.openBillsUrl || '',
         payOpenBillUrlTemplate: payload.payOpenBillUrlTemplate || '',
+        deleteOpenBillUrlTemplate: payload.deleteOpenBillUrlTemplate || '',
+        openBillEditDataUrlTemplate: payload.openBillEditDataUrlTemplate || '',
+        updateOpenBillUrlTemplate: payload.updateOpenBillUrlTemplate || '',
         invoiceUrlTemplate: payload.invoiceUrlTemplate || '',
         openBills: payload.openBills ?? [],
         settlingBill: null,
+        editingOpenBillId: null,
         csrf: payload.csrf,
         search: '',
         categoryId: '',
@@ -43,6 +47,14 @@ window.StarrichPos = function StarrichPos(payload) {
         paying: false,
         orderType: 'dine',
         payModalOpen: false,
+        varianModalOpen: false,
+        varianModalProduct: null,
+        addonsCatalog: payload.addonsCatalog ?? [],
+        addonModalOpen: false,
+        addonModalProduct: null,
+        addonModalSelected: {},
+        pendingLineProduct: null,
+        pendingLineSuhu: null,
         openBillName: '',
         paymentSplits: [{ metode: 'cash', jumlah: '' }],
 
@@ -55,6 +67,20 @@ window.StarrichPos = function StarrichPos(payload) {
             };
             sync();
             mq.addEventListener('change', sync);
+
+            queueMicrotask(() => {
+                const params = new URLSearchParams(window.location.search);
+                const editId = params.get('edit');
+                if (
+                    editId &&
+                    /^\d+$/.test(editId) &&
+                    this.openBillEditDataUrlTemplate &&
+                    Array.isArray(this.products) &&
+                    this.products.length > 0
+                ) {
+                    this.loadOpenBillForEdit(Number(editId));
+                }
+            });
 
             const flash = document.querySelector('[data-flash-success]');
             if (flash?.dataset.flashSuccess) {
@@ -87,12 +113,26 @@ window.StarrichPos = function StarrichPos(payload) {
             return this.cart.reduce((s, i) => s + i.harga * i.qty, 0);
         },
 
+        get addonModalExtraPreview() {
+            let sum = 0;
+            for (const opt of this.addonsCatalog || []) {
+                if (this.addonModalSelected[opt.code]) {
+                    sum += Number(opt.harga) || 0;
+                }
+            }
+
+            return sum;
+        },
+
         get splitPaidTotal() {
             return this.paymentSplits.reduce((s, r) => s + this.parseRupiahInput(r.jumlah), 0);
         },
 
         get payModalTotal() {
-            return this.settlingBill ? Number(this.settlingBill.total) || 0 : this.cartTotal;
+            if (this.settlingBill) {
+                return Number(this.settlingBill.total) || 0;
+            }
+            return this.cartTotal;
         },
 
         get splitKembalian() {
@@ -104,7 +144,9 @@ window.StarrichPos = function StarrichPos(payload) {
                 return;
             }
             this.settlingBill = null;
-            this.openBillName = '';
+            if (! this.editingOpenBillId) {
+                this.openBillName = '';
+            }
             this.initPaymentSplits(this.cartTotal);
             this.payModalOpen = true;
         },
@@ -113,6 +155,72 @@ window.StarrichPos = function StarrichPos(payload) {
             this.settlingBill = bill;
             this.initPaymentSplits(bill.total);
             this.payModalOpen = true;
+        },
+
+        async confirmDeleteOpenBill(bill) {
+            if (! bill?.id || ! this.deleteOpenBillUrlTemplate) {
+                return;
+            }
+            const Swal = window.Swal;
+            let confirmed = false;
+            if (Swal) {
+                const esc = (s) =>
+                    String(s)
+                        .replace(/&/g, '&amp;')
+                        .replace(/</g, '&lt;')
+                        .replace(/>/g, '&gt;')
+                        .replace(/"/g, '&quot;');
+                const nama = bill.nama_pelanggan ? esc(bill.nama_pelanggan) : '';
+                const result = await Swal.fire({
+                    icon: 'warning',
+                    title: 'Hapus open bill?',
+                    html:
+                        '<p style="margin:0;text-align:left;font-size:14px;color:#334155">Tagihan <strong>#' +
+                        String(bill.id).padStart(5, '0') +
+                        '</strong>' +
+                        (nama ? ' · ' + nama : '') +
+                        ' akan dihapus permanen beserta itemnya.</p>',
+                    showCancelButton: true,
+                    confirmButtonText: 'Ya, hapus',
+                    cancelButtonText: 'Batal',
+                    reverseButtons: true,
+                    buttonsStyling: false,
+                    customClass: {
+                        confirmButton: 'swal-btn-danger',
+                        cancelButton: 'swal-btn-ghost',
+                        popup: 'swal-popup-pos',
+                    },
+                    focusCancel: true,
+                });
+                confirmed = result.isConfirmed === true;
+            } else {
+                confirmed = window.confirm('Hapus open bill #' + String(bill.id).padStart(5, '0') + '?');
+            }
+            if (! confirmed) {
+                return;
+            }
+            this.paying = true;
+            try {
+                const url = this.deleteOpenBillUrlTemplate.replace('__ID__', String(bill.id));
+                const res = await fetch(url, {
+                    method: 'DELETE',
+                    headers: this.jsonHeaders(),
+                });
+                const data = await this.parseJsonResponse(res);
+                if (! res.ok) {
+                    Alpine.store('toast').show(this.errorMessage(data, 'Gagal menghapus.'), 'error');
+                    return;
+                }
+                if (this.editingOpenBillId && Number(this.editingOpenBillId) === Number(bill.id)) {
+                    this.cancelOpenBillEdit();
+                }
+                this.syncOpenBills(data.open_bills);
+                Alpine.store('toast').show(data.message || 'Open bill dihapus.', 'success');
+            } catch {
+                Alpine.store('toast').show('Koneksi bermasalah.', 'error');
+            } finally {
+                this.paying = false;
+            }
         },
 
         initPaymentSplits(total) {
@@ -128,7 +236,301 @@ window.StarrichPos = function StarrichPos(payload) {
         closePaymentModal() {
             this.payModalOpen = false;
             this.settlingBill = null;
+            if (! this.editingOpenBillId) {
+                this.openBillName = '';
+            }
+        },
+
+        closeVarianModal() {
+            this.varianModalOpen = false;
+            this.varianModalProduct = null;
+        },
+
+        pickVarianSuhu(suhu) {
+            if (! this.varianModalProduct) {
+                return;
+            }
+            const prod = this.varianModalProduct;
+            const suhuNorm = suhu === 'ice' || suhu === 'hot' ? suhu : null;
+            this.pendingLineProduct = prod;
+            this.pendingLineSuhu = suhuNorm;
+            this.closeVarianModal();
+            if (prod.addon_pilihan && (this.addonsCatalog || []).length > 0) {
+                this.openAddonModal(prod);
+            } else {
+                this.pushCartLine(prod, suhuNorm, []);
+                this.clearPendingLine();
+            }
+        },
+
+        openAddonModal(p) {
+            this.addonModalProduct = p;
+            const sel = {};
+            for (const opt of this.addonsCatalog || []) {
+                sel[opt.code] = false;
+            }
+            this.addonModalSelected = sel;
+            this.addonModalOpen = true;
+        },
+
+        closeAddonModal() {
+            this.addonModalOpen = false;
+            this.addonModalProduct = null;
+            this.addonModalSelected = {};
+            this.clearPendingLine();
+        },
+
+        clearPendingLine() {
+            this.pendingLineProduct = null;
+            this.pendingLineSuhu = null;
+        },
+
+        confirmAddonModal() {
+            const codes = [];
+            for (const opt of this.addonsCatalog || []) {
+                if (this.addonModalSelected[opt.code]) {
+                    codes.push(opt.code);
+                }
+            }
+            codes.sort();
+            const prod = this.pendingLineProduct || this.addonModalProduct;
+            if (! prod) {
+                this.closeAddonModal();
+                return;
+            }
+            const suhu = this.pendingLineSuhu;
+            this.pushCartLine(prod, suhu, codes);
+            this.addonModalOpen = false;
+            this.addonModalProduct = null;
+            this.addonModalSelected = {};
+            this.clearPendingLine();
+        },
+
+        /** Baris untuk checkout / update open bill (suhu & add-on). */
+        cartItemsForApi() {
+            return this.cart.map((c) => {
+                const row = { product_id: c.product_id, qty: c.qty };
+                if (c.suhu === 'ice' || c.suhu === 'hot') {
+                    row.suhu = c.suhu;
+                }
+                if (c.addons && c.addons.length > 0) {
+                    row.addons = [...c.addons].sort();
+                }
+
+                return row;
+            });
+        },
+
+        addonsKey(item) {
+            const a = item.addons;
+            if (! a || ! a.length) {
+                return '';
+            }
+
+            return [...a].sort().join(',');
+        },
+
+        cartLineMatch(a, b) {
+            return (
+                Number(a.product_id) === Number(b.product_id) &&
+                (a.suhu || null) === (b.suhu || null) &&
+                this.addonsKey(a) === this.addonsKey(b)
+            );
+        },
+
+        addonExtraForCodes(codes) {
+            if (! codes?.length) {
+                return 0;
+            }
+            let sum = 0;
+            for (const code of codes) {
+                const opt = (this.addonsCatalog || []).find((o) => o.code === code);
+                if (opt) {
+                    sum += Number(opt.harga) || 0;
+                }
+            }
+
+            return sum;
+        },
+
+        formatAddonsLine(item) {
+            const codes = item.addons;
+            if (! codes?.length) {
+                return '';
+            }
+            const parts = [];
+            for (const code of codes) {
+                const opt = (this.addonsCatalog || []).find((o) => o.code === code);
+                parts.push(opt ? opt.label : code);
+            }
+
+            return parts.join(', ');
+        },
+
+        async loadOpenBillForEdit(id) {
+            if (! this.openBillEditDataUrlTemplate) {
+                return;
+            }
+            try {
+                const url = this.openBillEditDataUrlTemplate.replace('__ID__', String(id));
+                const res = await fetch(url, {
+                    headers: {
+                        Accept: 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest',
+                    },
+                });
+                const data = await this.parseJsonResponse(res);
+                if (! res.ok) {
+                    Alpine.store('toast').show(this.errorMessage(data, 'Tidak dapat memuat open bill.'), 'error');
+                    return;
+                }
+                const d = data.data;
+                this.editingOpenBillId = d.id;
+                this.openBillName = d.nama_pelanggan || '';
+                this.orderType = d.order_type === 'take' ? 'take' : 'dine';
+                this.cart = (d.items || []).map((row) => {
+                    const pid = Number(row.product_id);
+                    const product = this.products.find((p) => Number(p.id) === pid);
+                    let suhu = row.suhu === 'ice' || row.suhu === 'hot' ? row.suhu : null;
+                    if (product?.suhu_pilihan && ! suhu) {
+                        suhu = 'hot';
+                    }
+                    let addons = Array.isArray(row.addons) ? row.addons.filter((x) => typeof x === 'string') : [];
+                    addons = [...addons].sort();
+                    if (product && ! product.addon_pilihan) {
+                        addons = [];
+                    }
+
+                    return {
+                        product_id: row.product_id,
+                        nama_produk: row.nama_produk,
+                        harga: Number(row.harga) || 0,
+                        qty: Number(row.qty) || 1,
+                        gambar: row.gambar || null,
+                        suhu,
+                        addons,
+                    };
+                });
+                if (window.innerWidth < 1024) {
+                    this.cartOpen = true;
+                }
+                if (window.history && window.history.replaceState) {
+                    window.history.replaceState({}, '', window.location.pathname);
+                }
+                Alpine.store('toast').show(
+                    'Open bill dimuat. Tambah atau ubah item, lalu simpan atau bayar.',
+                    'success',
+                );
+            } catch {
+                Alpine.store('toast').show('Koneksi bermasalah.', 'error');
+            }
+        },
+
+        async saveOpenBillEdits() {
+            if (! this.editingOpenBillId || this.cart.length === 0) {
+                Alpine.store('toast').show('Keranjang kosong.', 'error');
+                return;
+            }
+            if (! this.updateOpenBillUrlTemplate) {
+                return;
+            }
+            this.paying = true;
+            try {
+                const url = this.updateOpenBillUrlTemplate.replace('__ID__', String(this.editingOpenBillId));
+                const res = await fetch(url, {
+                    method: 'PUT',
+                    headers: this.jsonHeaders(),
+                    body: JSON.stringify({
+                        order_type: this.orderType,
+                        items: this.cartItemsForApi(),
+                    }),
+                });
+                const data = await this.parseJsonResponse(res);
+                if (! res.ok) {
+                    Alpine.store('toast').show(this.errorMessage(data, 'Gagal menyimpan.'), 'error');
+                    return;
+                }
+                this.syncOpenBills(data.open_bills);
+                Alpine.store('toast').show(data.message || 'Perubahan disimpan.', 'success');
+            } catch {
+                Alpine.store('toast').show('Koneksi bermasalah.', 'error');
+            } finally {
+                this.paying = false;
+            }
+        },
+
+        cancelOpenBillEdit() {
+            this.editingOpenBillId = null;
+            this.cart = [];
             this.openBillName = '';
+            this.orderType = 'dine';
+            this.payModalOpen = false;
+            this.settlingBill = null;
+            this.closeVarianModal();
+            this.closeAddonModal();
+            this.paymentSplits = [{ metode: 'cash', jumlah: '' }];
+        },
+
+        async checkoutEditedOpenBill(splits, total) {
+            const billId = this.editingOpenBillId;
+            if (! billId || ! this.updateOpenBillUrlTemplate || ! this.payOpenBillUrlTemplate) {
+                return;
+            }
+            this.paying = true;
+            try {
+                const updateUrl = this.updateOpenBillUrlTemplate.replace('__ID__', String(billId));
+                const ures = await fetch(updateUrl, {
+                    method: 'PUT',
+                    headers: this.jsonHeaders(),
+                    body: JSON.stringify({
+                        order_type: this.orderType,
+                        items: this.cartItemsForApi(),
+                    }),
+                });
+                const udata = await this.parseJsonResponse(ures);
+                if (! ures.ok) {
+                    Alpine.store('toast').show(this.errorMessage(udata, 'Gagal memperbarui tagihan.'), 'error');
+                    return;
+                }
+                const newTotal = Number(udata?.data?.total) || total;
+                const paidOk = splits.reduce((s, r) => s + r.jumlah, 0);
+                if (paidOk < newTotal) {
+                    this.closePaymentModal();
+                    this.initPaymentSplits(newTotal);
+                    this.payModalOpen = true;
+                    Alpine.store('toast').show(
+                        'Total berubah setelah disimpan. Sesuaikan nominal pembayaran.',
+                        'error',
+                    );
+                    return;
+                }
+
+                const payUrl = this.payOpenBillUrlTemplate.replace('__ID__', String(billId));
+                const pres = await fetch(payUrl, {
+                    method: 'POST',
+                    headers: this.jsonHeaders(),
+                    body: JSON.stringify({ payment_splits: splits }),
+                });
+                const pdata = await this.parseJsonResponse(pres);
+                if (! pres.ok) {
+                    Alpine.store('toast').show(this.errorMessage(pdata, 'Pembayaran gagal.'), 'error');
+                    return;
+                }
+                const trxId = pdata?.data?.transaction_id ?? billId;
+                const trxTotal = pdata?.data?.total ?? newTotal;
+                const bayar = pdata?.data?.bayar ?? paidOk;
+                const kembalian = pdata?.data?.kembalian ?? Math.max(0, bayar - trxTotal);
+                this.editingOpenBillId = null;
+                this.cart = [];
+                this.closePaymentModal();
+                this.paymentSplits = [{ metode: 'cash', jumlah: '' }];
+                this.syncOpenBills(pdata.open_bills);
+                this.showSuccessAlert({ trxId, total: trxTotal, bayar, kembalian });
+            } catch {
+                Alpine.store('toast').show('Koneksi bermasalah.', 'error');
+            } finally {
+                this.paying = false;
+            }
         },
 
         syncOpenBills(list) {
@@ -175,16 +577,45 @@ window.StarrichPos = function StarrichPos(payload) {
         },
 
         addProduct(p) {
-            const found = this.cart.find((c) => c.product_id === p.id);
+            if (p.suhu_pilihan) {
+                this.varianModalProduct = p;
+                this.varianModalOpen = true;
+
+                return;
+            }
+            if (p.addon_pilihan && (this.addonsCatalog || []).length > 0) {
+                this.pendingLineProduct = p;
+                this.pendingLineSuhu = null;
+                this.openAddonModal(p);
+
+                return;
+            }
+            this.pushCartLine(p, null, []);
+        },
+
+        pushCartLine(p, suhu, addons) {
+            const list = Array.isArray(addons) ? addons : [];
+            const suhuNorm = suhu === 'ice' || suhu === 'hot' ? suhu : null;
+            const addonsNorm = [...new Set(list.filter((x) => typeof x === 'string'))].sort();
+            const unitExtra = this.addonExtraForCodes(addonsNorm);
+            const unitHarga = Number(p.harga) + unitExtra;
+            const found = this.cart.find(
+                (c) =>
+                    Number(c.product_id) === Number(p.id) &&
+                    (c.suhu || null) === suhuNorm &&
+                    this.addonsKey(c) === addonsNorm.join(','),
+            );
             if (found) {
                 found.qty += 1;
             } else {
                 this.cart.push({
                     product_id: p.id,
                     nama_produk: p.nama_produk,
-                    harga: p.harga,
+                    harga: unitHarga,
                     qty: 1,
                     gambar: p.gambar,
+                    suhu: suhuNorm,
+                    addons: addonsNorm,
                 });
             }
             if (window.innerWidth < 1024) {
@@ -199,12 +630,12 @@ window.StarrichPos = function StarrichPos(payload) {
         dec(item) {
             item.qty -= 1;
             if (item.qty <= 0) {
-                this.cart = this.cart.filter((c) => c.product_id !== item.product_id);
+                this.cart = this.cart.filter((c) => ! this.cartLineMatch(c, item));
             }
         },
 
         removeItem(item) {
-            this.cart = this.cart.filter((c) => c.product_id !== item.product_id);
+            this.cart = this.cart.filter((c) => ! this.cartLineMatch(c, item));
         },
 
         formatRp(n) {
@@ -258,6 +689,9 @@ window.StarrichPos = function StarrichPos(payload) {
         },
 
         async submitOpenBill() {
+            if (this.editingOpenBillId) {
+                return;
+            }
             if (this.settlingBill || this.cart.length === 0) {
                 return;
             }
@@ -277,10 +711,7 @@ window.StarrichPos = function StarrichPos(payload) {
                         action: 'open_bill',
                         order_type: this.orderType,
                         nama_pelanggan: nama,
-                        items: this.cart.map((c) => ({
-                            product_id: c.product_id,
-                            qty: c.qty,
-                        })),
+                        items: this.cartItemsForApi(),
                     }),
                 });
                 const data = await this.parseJsonResponse(res);
@@ -316,6 +747,11 @@ window.StarrichPos = function StarrichPos(payload) {
                 return;
             }
 
+            if (this.editingOpenBillId) {
+                await this.checkoutEditedOpenBill(splits, total);
+                return;
+            }
+
             if (this.cart.length === 0) {
                 return;
             }
@@ -328,10 +764,7 @@ window.StarrichPos = function StarrichPos(payload) {
                     body: JSON.stringify({
                         action: 'pay',
                         order_type: this.orderType,
-                        items: this.cart.map((c) => ({
-                            product_id: c.product_id,
-                            qty: c.qty,
-                        })),
+                        items: this.cartItemsForApi(),
                         payment_splits: splits,
                     }),
                 });

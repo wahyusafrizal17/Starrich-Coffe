@@ -82,8 +82,19 @@
 
             <div class="items">
                 @foreach ($transaction->details as $d)
+                    @php($addonLine = \App\Support\OrderAddonCatalog::labelsLine($d->addons ?? []))
                     <div class="item">
-                        <div class="item-name">{{ $d->product->nama_produk ?? 'Produk' }}</div>
+                        <div class="item-name">
+                            {{ $d->product->nama_produk ?? 'Produk' }}
+                            @if ($d->suhu === 'ice')
+                                <span class="muted"> · Ice</span>
+                            @elseif ($d->suhu === 'hot')
+                                <span class="muted"> · Hot</span>
+                            @endif
+                        </div>
+                        @if ($addonLine !== '')
+                            <div class="muted" style="font-size:10px;line-height:1.35;margin-bottom:2px">{{ $addonLine }}</div>
+                        @endif
                         <div class="item-line">
                             <span>{{ $d->qty }} x {{ number_format($d->harga, 0, ',', '.') }}</span>
                             <span>{{ number_format($d->subtotal, 0, ',', '.') }}</span>

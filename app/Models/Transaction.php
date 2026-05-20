@@ -87,7 +87,17 @@ class Transaction extends Model
             'items_count' => (int) $this->details->sum('qty'),
             'items_preview' => $this->details
                 ->take(3)
-                ->map(fn (TransactionDetail $d) => $d->product?->nama_produk ?? '—')
+                ->map(function (TransactionDetail $d) {
+                    $name = $d->product?->nama_produk ?? '—';
+                    if ($d->suhu === 'ice') {
+                        return $name.' (Ice)';
+                    }
+                    if ($d->suhu === 'hot') {
+                        return $name.' (Hot)';
+                    }
+
+                    return $name;
+                })
                 ->values()
                 ->all(),
         ];
