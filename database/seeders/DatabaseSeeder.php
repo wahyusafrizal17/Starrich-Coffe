@@ -60,6 +60,8 @@ class DatabaseSeeder extends Seeder
             Product::create($r);
         }
 
+        $this->call(OrderAddonSeeder::class);
+
         $assets = [
             ['nama' => 'Mesin Espresso La Marzocco Linea Mini', 'tanggal_perolehan' => now()->subMonths(8)->toDateString(), 'harga_perolehan' => 75000000, 'catatan' => 'Mesin utama bar'],
             ['nama' => 'Grinder Mahlkonig E65S', 'tanggal_perolehan' => now()->subMonths(8)->toDateString(), 'harga_perolehan' => 28000000, 'catatan' => null],

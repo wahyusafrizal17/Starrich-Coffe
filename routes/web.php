@@ -3,6 +3,7 @@
 use App\Http\Controllers\Admin\AssetController;
 use App\Http\Controllers\Admin\CategoryController;
 use App\Http\Controllers\Admin\ExpenseController;
+use App\Http\Controllers\Admin\OrderAddonController;
 use App\Http\Controllers\Admin\ProductController;
 use App\Http\Controllers\Admin\ReportController;
 use App\Http\Controllers\Admin\UserController;
@@ -35,6 +36,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     Route::middleware('admin')->prefix('admin')->name('admin.')->group(function () {
         Route::resource('categories', CategoryController::class)->except(['show']);
+        Route::resource('order-addons', OrderAddonController::class)->except(['show']);
         Route::resource('products', ProductController::class)->except(['show']);
         Route::resource('users', UserController::class)->except(['show']);
         Route::resource('pengeluaran', ExpenseController::class)

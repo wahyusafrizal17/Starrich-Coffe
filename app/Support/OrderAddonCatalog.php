@@ -2,12 +2,29 @@
 
 namespace App\Support;
 
+use App\Models\OrderAddon;
+use Illuminate\Support\Facades\Schema;
+
 class OrderAddonCatalog
 {
     /** @return array<string, array{label: string, harga: int}> */
     public static function definitions(): array
     {
-        return config('order_addons.items', []);
+        if (! Schema::hasTable('order_addons')) {
+            return config('order_addons.items', []);
+        }
+
+        return OrderAddon::query()
+            ->active()
+            ->ordered()
+            ->get()
+            ->mapWithKeys(fn (OrderAddon $a) => [
+                $a->kode => [
+                    'label' => $a->label,
+                    'harga' => (int) $a->harga,
+                ],
+            ])
+            ->all();
     }
 
     /** @return list<string> */
@@ -41,10 +58,9 @@ class OrderAddonCatalog
     /** @param  list<string>  $normalizedCodes */
     public static function extraPriceForCodes(array $normalizedCodes): int
     {
-        $defs = self::definitions();
         $sum = 0;
         foreach ($normalizedCodes as $c) {
-            $sum += (int) ($defs[$c]['harga'] ?? 0);
+            $sum += self::priceForCode($c);
         }
 
         return $sum;
@@ -53,14 +69,43 @@ class OrderAddonCatalog
     /** @param  list<string>  $normalizedCodes */
     public static function labelsLine(array $normalizedCodes): string
     {
-        $defs = self::definitions();
         $parts = [];
         foreach ($normalizedCodes as $c) {
-            if (isset($defs[$c]['label'])) {
-                $parts[] = $defs[$c]['label'];
+            $label = self::labelForCode($c);
+            if ($label !== null) {
+                $parts[] = $label;
             }
         }
 
         return implode(', ', $parts);
     }
+
+    public static function labelForCode(string $code): ?string
+    {
+        if (Schema::hasTable('order_addons')) {
+            $row = OrderAddon::query()->where('kode', $code)->first();
+            if ($row) {
+                return $row->label;
+            }
+        }
+
+        $defs = config('order_addons.items', []);
+
+        return $defs[$code]['label'] ?? null;
+    }
+
+    public static function priceForCode(string $code): int
+    {
+        if (Schema::hasTable('order_addons')) {
+            $row = OrderAddon::query()->where('kode', $code)->first();
+            if ($row) {
+                return (int) $row->harga;
+            }
+        }
+
+        $defs = config('order_addons.items', []);
+
+        return (int) ($defs[$code]['harga'] ?? 0);
+    }
+
 }

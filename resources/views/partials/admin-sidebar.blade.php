@@ -50,6 +50,10 @@
                     <svg viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M3 7.5A1.5 1.5 0 0 1 4.5 6h3.879c.265 0 .52.105.707.293L10.5 7.5h9A1.5 1.5 0 0 1 21 9v9a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 18V7.5Z"/></svg>
                     Kategori
                 </a>
+                <a href="{{ route('admin.order-addons.index') }}" class="vx-sidebar-link {{ request()->routeIs('admin.order-addons.*') ? 'is-active' : '' }}">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15M6 12h.008v.008H6V12Zm3 0h.008v.008H9V12Zm3 0h.008v.008H12V12Zm3 0h.008v.008H15V12Z"/></svg>
+                    Tambahan pesanan
+                </a>
             @endif
         </nav>
 

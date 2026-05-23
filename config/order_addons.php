@@ -1,18 +1,9 @@
 <?php
 
 /**
- * Add-on pesanan (biji kopi, susu, dll.). Tambah entri di sini untuk opsi baru.
- * Key = kode unik disimpan di DB & dikirim dari kasir.
+ * @deprecated Sumber data tambahan pesanan sekarang di tabel `order_addons` (menu Admin → Tambahan pesanan).
+ * File ini hanya dipakai sebagai fallback jika tabel belum ada.
  */
 return [
-    'items' => [
-        'arabica' => [
-            'label' => 'Biji Arabika',
-            'harga' => 2000,
-        ],
-        'oatside_milk' => [
-            'label' => 'Susu Oatside',
-            'harga' => 5000,
-        ],
-    ],
+    'items' => [],
 ];
