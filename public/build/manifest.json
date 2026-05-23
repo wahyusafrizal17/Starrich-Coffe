@@ -1,6 +1,6 @@
 {
   "resources/css/app.css": {
-    "file": "assets/app-DopP4F8R.css",
+    "file": "assets/app-C-pksL9Q.css",
     "src": "resources/css/app.css",
     "isEntry": true,
     "name": "app",
@@ -9,18 +9,9 @@
     ]
   },
   "resources/js/app.js": {
-    "file": "assets/app-CN60yTLu.js",
+    "file": "assets/app-DhhpjvYY.js",
     "name": "app",
     "src": "resources/js/app.js",
-    "isEntry": true,
-    "imports": [
-      "resources/js/rawbt-print.js"
-    ]
-  },
-  "resources/js/rawbt-print.js": {
-    "file": "assets/rawbt-print-D1z4vSim.js",
-    "name": "rawbt-print",
-    "src": "resources/js/rawbt-print.js",
     "isEntry": true
   }
 }

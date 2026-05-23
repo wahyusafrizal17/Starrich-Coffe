@@ -17,8 +17,6 @@
         'openBillEditDataUrlTemplate' => route('cashier.open-bills.edit-data', ['transaction' => '__ID__']),
         'updateOpenBillUrlTemplate' => route('cashier.open-bills.update', ['transaction' => '__ID__']),
         'invoiceUrlTemplate' => route('cashier.invoice', ['transaction' => '__ID__']),
-        'receiptEscPosUrlTemplate' => route('cashier.receipt.escpos', ['transaction' => '__ID__']),
-        'autoPrintRawBt' => (bool) config('receipt.auto_print_rawbt', true),
         'addonsCatalog' => $addonsCatalog,
         'csrf' => csrf_token(),
     ];

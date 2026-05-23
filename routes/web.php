@@ -32,7 +32,6 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::delete('/kasir/open-bills/{transaction}', [CashierController::class, 'destroyOpenBill'])->name('cashier.open-bills.destroy');
         Route::get('/kasir/history', [CashierController::class, 'history'])->name('cashier.history');
         Route::get('/kasir/struk/{transaction}', [CashierController::class, 'invoice'])->name('cashier.invoice');
-        Route::get('/kasir/struk/{transaction}/escpos', [CashierController::class, 'receiptEscPos'])->name('cashier.receipt.escpos');
     });
 
     Route::middleware('admin')->prefix('admin')->name('admin.')->group(function () {

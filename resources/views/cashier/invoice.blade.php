@@ -46,10 +46,19 @@
             font-size: 13px; font-weight: 600; cursor: pointer; text-decoration: none;
             border: 1px solid transparent;
         }
+        .btn-print { background: #2563eb; color: #fff; }
+        .btn-print:hover { background: #1d4ed8; }
         .btn-close { background: #fff; color: #1f2937; border-color: #e5e7eb; }
         .btn-close:hover { background: #f3f4f6; }
+
+        @media print {
+            html, body { background: #fff; }
+            .wrap { padding: 0; }
+            .receipt { box-shadow: none; width: 80mm; padding: 6mm 4mm; border-radius: 0; }
+            .actions { display: none !important; }
+            @page { margin: 4mm; size: 80mm auto; }
+        }
     </style>
-    @vite(['resources/js/rawbt-print.js'])
 </head>
 <body>
     <div class="wrap">
@@ -125,19 +134,22 @@
 
             <div class="actions">
                 <button type="button" class="btn-close" onclick="window.close()">Tutup</button>
+                <button type="button" class="btn-print" onclick="window.print()">Cetak</button>
             </div>
         </div>
     </div>
 
-    @if (request()->query('print') === '1')
-        <script>
-            (function () {
-                const RawBt = window.StarrichRawBt;
-                if (RawBt && RawBt.isRawBtEnvironment()) {
-                    RawBt.fetchAndPrintReceipt(@json(route('cashier.receipt.escpos', $transaction)));
-                }
-            })();
-        </script>
-    @endif
+    <script>
+        const params = new URLSearchParams(window.location.search);
+        if (params.get('print') === '1') {
+            window.addEventListener('load', () => {
+                const imgs = Array.from(document.images).filter((i) => ! i.complete);
+                Promise.all(imgs.map((img) => new Promise((resolve) => {
+                    img.addEventListener('load', resolve, { once: true });
+                    img.addEventListener('error', resolve, { once: true });
+                }))).then(() => setTimeout(() => window.print(), 300));
+            });
+        }
+    </script>
 </body>
 </html>
