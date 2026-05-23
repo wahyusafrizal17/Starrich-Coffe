@@ -9,9 +9,18 @@
     ]
   },
   "resources/js/app.js": {
-    "file": "assets/app-DhhpjvYY.js",
+    "file": "assets/app-BN8YGJ2W.js",
     "name": "app",
     "src": "resources/js/app.js",
+    "isEntry": true,
+    "imports": [
+      "resources/js/rawbt-print.js"
+    ]
+  },
+  "resources/js/rawbt-print.js": {
+    "file": "assets/rawbt-print-CUFNHUIb.js",
+    "name": "rawbt-print",
+    "src": "resources/js/rawbt-print.js",
     "isEntry": true
   }
 }

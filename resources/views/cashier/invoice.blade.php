@@ -58,7 +58,9 @@
             .actions { display: none !important; }
             @page { margin: 4mm; size: 80mm auto; }
         }
+        .btn-print-fallback { background: #64748b !important; }
     </style>
+    @vite(['resources/js/rawbt-print.js'])
 </head>
 <body>
     <div class="wrap">
@@ -134,22 +136,48 @@
 
             <div class="actions">
                 <button type="button" class="btn-close" onclick="window.close()">Tutup</button>
-                <button type="button" class="btn-print" onclick="window.print()">Cetak</button>
+                <button type="button" class="btn-print" id="btn-rawbt-print">Cetak thermal (RawBT)</button>
+                <button type="button" class="btn-print btn-print-fallback" id="btn-browser-print" style="display:none">Cetak browser</button>
             </div>
         </div>
     </div>
 
     <script>
-        const params = new URLSearchParams(window.location.search);
-        if (params.get('print') === '1') {
-            window.addEventListener('load', () => {
-                const imgs = Array.from(document.images).filter((i) => ! i.complete);
-                Promise.all(imgs.map((img) => new Promise((resolve) => {
-                    img.addEventListener('load', resolve, { once: true });
-                    img.addEventListener('error', resolve, { once: true });
-                }))).then(() => setTimeout(() => window.print(), 300));
+        (function () {
+            const escposUrl = @json(route('cashier.receipt.escpos', $transaction));
+            const RawBt = window.StarrichRawBt;
+            const btnRawBt = document.getElementById('btn-rawbt-print');
+            const btnBrowser = document.getElementById('btn-browser-print');
+
+            if (! RawBt || ! RawBt.isRawBtEnvironment()) {
+                if (btnBrowser) btnBrowser.style.display = '';
+            }
+
+            async function doPrint() {
+                if (! RawBt) return false;
+                return RawBt.fetchAndPrintReceipt(escposUrl);
+            }
+
+            btnRawBt?.addEventListener('click', async () => {
+                btnRawBt.disabled = true;
+                const ok = await doPrint();
+                btnRawBt.disabled = false;
+                if (!ok) {
+                    alert('Gagal mengirim ke RawBT. Pastikan RawBT terpasang dan printer Bluetooth terhubung.');
+                }
             });
-        }
+
+            btnBrowser?.addEventListener('click', () => window.print());
+
+            const params = new URLSearchParams(window.location.search);
+            if (params.get('print') === '1') {
+                if (RawBt && RawBt.isRawBtEnvironment()) {
+                    doPrint();
+                } else {
+                    window.addEventListener('load', () => window.print());
+                }
+            }
+        })();
     </script>
 </body>
 </html>

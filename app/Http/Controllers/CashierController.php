@@ -6,6 +6,7 @@ use App\Models\Category;
 use App\Models\Product;
 use App\Models\Transaction;
 use App\Models\TransactionDetail;
+use App\Support\EscPosReceiptBuilder;
 use App\Support\OrderAddonCatalog;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -85,6 +86,24 @@ class CashierController extends Controller
         $transaction->load(['user', 'details.product']);
 
         return view('cashier.invoice', compact('transaction'));
+    }
+
+    /** ESC/POS base64 untuk RawBT (tanpa HTML/PDF). */
+    public function receiptEscPos(Transaction $transaction): JsonResponse
+    {
+        if (! $transaction->isPaid()) {
+            return response()->json([
+                'ok' => false,
+                'message' => 'Struk hanya untuk transaksi lunas.',
+            ], 422);
+        }
+
+        return response()->json([
+            'ok' => true,
+            'transaction_id' => $transaction->id,
+            'escpos_base64' => EscPosReceiptBuilder::fromConfig()->buildBase64($transaction),
+            'paper_width' => config('receipt.paper_width', '58'),
+        ]);
     }
 
     public function history(Request $request): View
@@ -312,7 +331,7 @@ class CashierController extends Controller
         return response()->json([
             'ok' => true,
             'message' => 'Pembayaran open bill berhasil.',
-            'data' => $result,
+            'data' => $this->appendReceiptToResult($result),
             'open_bills' => $this->openBillsPayload(),
         ]);
     }
@@ -398,9 +417,29 @@ class CashierController extends Controller
         return response()->json([
             'ok' => true,
             'message' => 'Transaksi berhasil disimpan.',
-            'data' => $result,
+            'data' => $this->appendReceiptToResult($result),
             'open_bills' => $this->openBillsPayload(),
         ]);
+    }
+
+    /**
+     * @param  array{transaction_id: int, total?: int, bayar?: int, kembalian?: int}  $result
+     * @return array<string, mixed>
+     */
+    private function appendReceiptToResult(array $result): array
+    {
+        $transaction = Transaction::query()
+            ->with(['user', 'details.product'])
+            ->find($result['transaction_id'] ?? 0);
+
+        if ($transaction && $transaction->isPaid()) {
+            $result['receipt'] = [
+                'transaction_id' => $transaction->id,
+                'escpos_base64' => EscPosReceiptBuilder::fromConfig()->buildBase64($transaction),
+            ];
+        }
+
+        return $result;
     }
 
     /**

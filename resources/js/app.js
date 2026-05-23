@@ -2,6 +2,7 @@ import './bootstrap';
 
 import Alpine from 'alpinejs';
 import Swal from 'sweetalert2';
+import { autoPrintAfterPayment, fetchAndPrintReceipt, isRawBtEnvironment } from './rawbt-print';
 
 window.Swal = Swal;
 
@@ -36,6 +37,8 @@ window.StarrichPos = function StarrichPos(payload) {
         openBillEditDataUrlTemplate: payload.openBillEditDataUrlTemplate || '',
         updateOpenBillUrlTemplate: payload.updateOpenBillUrlTemplate || '',
         invoiceUrlTemplate: payload.invoiceUrlTemplate || '',
+        receiptEscPosUrlTemplate: payload.receiptEscPosUrlTemplate || '',
+        autoPrintRawBt: payload.autoPrintRawBt !== false,
         openBills: payload.openBills ?? [],
         settlingBill: null,
         editingOpenBillId: null,
@@ -525,6 +528,7 @@ window.StarrichPos = function StarrichPos(payload) {
                 this.closePaymentModal();
                 this.paymentSplits = [{ metode: 'cash', jumlah: '' }];
                 this.syncOpenBills(pdata.open_bills);
+                this.triggerAutoPrint(pdata?.data?.receipt, trxId);
                 this.showSuccessAlert({ trxId, total: trxTotal, bayar, kembalian });
             } catch {
                 Alpine.store('toast').show('Koneksi bermasalah.', 'error');
@@ -781,6 +785,7 @@ window.StarrichPos = function StarrichPos(payload) {
                 this.closePaymentModal();
                 this.paymentSplits = [{ metode: 'cash', jumlah: '' }];
                 this.syncOpenBills(data.open_bills);
+                this.triggerAutoPrint(data?.data?.receipt, trxId);
                 this.showSuccessAlert({ trxId, total: trxTotal, bayar, kembalian });
             } catch {
                 Alpine.store('toast').show('Koneksi bermasalah.', 'error');
@@ -816,12 +821,43 @@ window.StarrichPos = function StarrichPos(payload) {
                 this.paymentSplits = [{ metode: 'cash', jumlah: '' }];
                 this.openBills = this.openBills.filter((b) => b.id !== billId);
                 this.syncOpenBills(data.open_bills);
+                this.triggerAutoPrint(data?.data?.receipt, trxId);
                 this.showSuccessAlert({ trxId, total: trxTotal, bayar, kembalian });
             } catch {
                 Alpine.store('toast').show('Koneksi bermasalah.', 'error');
             } finally {
                 this.paying = false;
             }
+        },
+
+        triggerAutoPrint(receipt, trxId) {
+            const shouldPrint =
+                this.autoPrintRawBt &&
+                (isRawBtEnvironment() || window.StarrichAndroidRawBt === true);
+            if (! shouldPrint) {
+                return;
+            }
+            const payload = receipt || { transaction_id: trxId };
+            void autoPrintAfterPayment(payload, {
+                receiptEscPosUrlTemplate: this.receiptEscPosUrlTemplate,
+                autoPrint: true,
+            });
+        },
+
+        async reprintReceipt(trxId) {
+            if (! trxId) {
+                return;
+            }
+            if (this.receiptEscPosUrlTemplate) {
+                const url = this.receiptEscPosUrlTemplate.replace('__ID__', String(trxId));
+                const ok = await fetchAndPrintReceipt(url);
+                if (ok) {
+                    Alpine.store('toast').show('Struk dikirim ke printer.', 'success');
+
+                    return;
+                }
+            }
+            Alpine.store('toast').show('Gagal mencetak ke RawBT.', 'error');
         },
 
         jsonHeaders() {
@@ -856,9 +892,8 @@ window.StarrichPos = function StarrichPos(payload) {
                 return;
             }
             const fmt = (n) => 'Rp ' + new Intl.NumberFormat('id-ID').format(Number(n) || 0);
-            const invoiceUrl = trxId && this.invoiceUrlTemplate
-                ? this.invoiceUrlTemplate.replace('__ID__', trxId)
-                : null;
+            const canRawBt = Boolean(trxId && this.receiptEscPosUrlTemplate);
+            const useRawBt = canRawBt && (isRawBtEnvironment() || window.StarrichAndroidRawBt === true);
 
             Swal.fire({
                 icon: 'success',
@@ -875,10 +910,10 @@ window.StarrichPos = function StarrichPos(payload) {
                         </div>
                     </div>
                 `,
-                showCancelButton: !! invoiceUrl,
+                showCancelButton: canRawBt,
                 showCloseButton: true,
                 confirmButtonText: 'Selesai',
-                cancelButtonText: 'Cetak invoice',
+                cancelButtonText: useRawBt ? 'Cetak ulang' : 'Cetak struk',
                 reverseButtons: true,
                 buttonsStyling: false,
                 customClass: {
@@ -889,8 +924,8 @@ window.StarrichPos = function StarrichPos(payload) {
                 allowEnterKey: true,
                 focusConfirm: true,
             }).then((result) => {
-                if (result.dismiss === Swal.DismissReason.cancel && invoiceUrl) {
-                    window.open(invoiceUrl + '?print=1', '_blank', 'noopener,width=420,height=720');
+                if (result.dismiss === Swal.DismissReason.cancel && trxId) {
+                    void this.reprintReceipt(trxId);
                 }
             });
         },
