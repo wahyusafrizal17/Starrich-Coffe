@@ -2,7 +2,7 @@ import './bootstrap';
 
 import Alpine from 'alpinejs';
 import Swal from 'sweetalert2';
-import { autoPrintAfterPayment, fetchAndPrintReceipt, isRawBtEnvironment } from './rawbt-print';
+import { autoPrintAfterPayment, isRawBtEnvironment } from './rawbt-print';
 
 window.Swal = Swal;
 
@@ -844,22 +844,6 @@ window.StarrichPos = function StarrichPos(payload) {
             });
         },
 
-        async reprintReceipt(trxId) {
-            if (! trxId) {
-                return;
-            }
-            if (this.receiptEscPosUrlTemplate) {
-                const url = this.receiptEscPosUrlTemplate.replace('__ID__', String(trxId));
-                const ok = await fetchAndPrintReceipt(url);
-                if (ok) {
-                    Alpine.store('toast').show('Struk dikirim ke printer.', 'success');
-
-                    return;
-                }
-            }
-            Alpine.store('toast').show('Gagal mencetak ke RawBT.', 'error');
-        },
-
         jsonHeaders() {
             return {
                 'Content-Type': 'application/json',
@@ -892,8 +876,6 @@ window.StarrichPos = function StarrichPos(payload) {
                 return;
             }
             const fmt = (n) => 'Rp ' + new Intl.NumberFormat('id-ID').format(Number(n) || 0);
-            const canRawBt = Boolean(trxId && this.receiptEscPosUrlTemplate);
-            const useRawBt = canRawBt && (isRawBtEnvironment() || window.StarrichAndroidRawBt === true);
 
             Swal.fire({
                 icon: 'success',
@@ -910,23 +892,16 @@ window.StarrichPos = function StarrichPos(payload) {
                         </div>
                     </div>
                 `,
-                showCancelButton: canRawBt,
+                showCancelButton: false,
                 showCloseButton: true,
                 confirmButtonText: 'Selesai',
-                cancelButtonText: useRawBt ? 'Cetak ulang' : 'Cetak struk',
-                reverseButtons: true,
                 buttonsStyling: false,
                 customClass: {
                     confirmButton: 'swal-btn-primary',
-                    cancelButton: 'swal-btn-ghost',
                     popup: 'swal-popup-pos',
                 },
                 allowEnterKey: true,
                 focusConfirm: true,
-            }).then((result) => {
-                if (result.dismiss === Swal.DismissReason.cancel && trxId) {
-                    void this.reprintReceipt(trxId);
-                }
             });
         },
     };
