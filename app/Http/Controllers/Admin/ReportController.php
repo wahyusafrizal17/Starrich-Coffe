@@ -21,10 +21,24 @@ class ReportController extends Controller
             ->with(['user', 'details.product'])
             ->whereBetween('created_at', [$from->copy()->startOfDay(), $to->copy()->endOfDay()]);
 
+        $rangeStart = $from->copy()->startOfDay();
+        $rangeEnd = $to->copy()->endOfDay();
+
         $sumTotal = (int) (clone $base)->sum('total');
+        $paymentTotals = $this->paymentTotalsByMethod($rangeStart, $rangeEnd);
+        $openBillTotal = (int) Transaction::open()->sum('total');
+        $openBillCount = (int) Transaction::open()->count();
         $transactions = (clone $base)->latest()->paginate(20)->withQueryString();
 
-        return view('admin.reports.index', compact('transactions', 'sumTotal', 'from', 'to'));
+        return view('admin.reports.index', compact(
+            'transactions',
+            'sumTotal',
+            'paymentTotals',
+            'openBillTotal',
+            'openBillCount',
+            'from',
+            'to',
+        ));
     }
 
     public function export(Request $request): StreamedResponse
@@ -117,5 +131,44 @@ class ReportController extends Controller
             'operatingCost' => $operatingCost,
             'netIncome' => $netIncome,
         ]);
+    }
+
+    /**
+     * @return array{cash: int, transfer: int, qris: int}
+     */
+    private function paymentTotalsByMethod(\Illuminate\Support\Carbon $rangeStart, \Illuminate\Support\Carbon $rangeEnd): array
+    {
+        $totals = [
+            'cash' => 0,
+            'transfer' => 0,
+            'qris' => 0,
+        ];
+
+        Transaction::paid()
+            ->whereBetween('created_at', [$rangeStart, $rangeEnd])
+            ->select(['total', 'metode_pembayaran', 'payment_splits'])
+            ->chunkById(500, function ($rows) use (&$totals) {
+                foreach ($rows as $transaction) {
+                    $splits = $transaction->payment_splits;
+
+                    if (is_array($splits) && $splits !== []) {
+                        foreach ($splits as $split) {
+                            $method = $split['metode'] ?? null;
+                            if (is_string($method) && array_key_exists($method, $totals)) {
+                                $totals[$method] += (int) ($split['jumlah'] ?? 0);
+                            }
+                        }
+
+                        continue;
+                    }
+
+                    $method = $transaction->metode_pembayaran ?? 'cash';
+                    if (array_key_exists($method, $totals)) {
+                        $totals[$method] += (int) $transaction->total;
+                    }
+                }
+            });
+
+        return $totals;
     }
 }

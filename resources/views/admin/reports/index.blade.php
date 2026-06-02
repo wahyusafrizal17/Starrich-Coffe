@@ -34,13 +34,56 @@
         </form>
     </div>
 
-    <div class="vx-stat mb-5">
-        <span class="vx-stat-icon vx-bg-success">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 18.75a60.07 60.07 0 0 1 15.8 2.1c.72.2 1.45-.34 1.45-1.09v-1.01M3.75 4.5v.75A60.07 60.07 0 0 1 18 7.5m0 0v.75a60.07 60.07 0 0 0 2.25.18M18 12.75v.75a60.07 60.07 0 0 1-15.8 2.1c-.72.2-1.45-.34-1.45-1.09V13.5"/></svg>
-        </span>
-        <div class="min-w-0">
-            <p class="vx-stat-label">Total penjualan (periode)</p>
-            <p class="vx-stat-value">{{ format_rupiah($sumTotal) }}</p>
+    <div class="space-y-4 mb-5">
+        <div class="grid gap-4 sm:grid-cols-2">
+            <div class="vx-stat">
+                <span class="vx-stat-icon vx-bg-success">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 18.75a60.07 60.07 0 0 1 15.8 2.1c.72.2 1.45-.34 1.45-1.09v-1.01M3.75 4.5v.75A60.07 60.07 0 0 1 18 7.5m0 0v.75a60.07 60.07 0 0 0 2.25.18M18 12.75v.75a60.07 60.07 0 0 1-15.8 2.1c-.72.2-1.45-.34-1.45-1.09V13.5"/></svg>
+                </span>
+                <div class="min-w-0">
+                    <p class="vx-stat-label">Total penjualan</p>
+                    <p class="vx-stat-value">{{ format_rupiah($sumTotal) }}</p>
+                </div>
+            </div>
+            <a href="{{ route('cashier.open-bills') }}" class="vx-stat transition hover:border-amber-300 hover:shadow-md no-underline text-inherit">
+                <span class="vx-stat-icon vx-bg-warning">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/></svg>
+                </span>
+                <div class="min-w-0">
+                    <p class="vx-stat-label">Open bill belum lunas</p>
+                    <p class="vx-stat-value text-amber-700">{{ format_rupiah($openBillTotal) }}</p>
+                    <p class="mt-1 text-xs text-slate-500">{{ $openBillCount }} tagihan outstanding · semua periode</p>
+                </div>
+            </a>
+        </div>
+        <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <div class="vx-stat">
+                <span class="vx-stat-icon vx-bg-success">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 18.75a60.07 60.07 0 0 1 15.8 2.1c.72.2 1.45-.34 1.45-1.09v-1.01M3.75 4.5v.75A60.07 60.07 0 0 1 18 7.5m0 0v.75a60.07 60.07 0 0 0 2.25.18M18 12.75v.75a60.07 60.07 0 0 1-15.8 2.1c-.72.2-1.45-.34-1.45-1.09V13.5"/></svg>
+                </span>
+                <div class="min-w-0">
+                    <p class="vx-stat-label">Cash</p>
+                    <p class="vx-stat-value">{{ format_rupiah($paymentTotals['cash']) }}</p>
+                </div>
+            </div>
+            <div class="vx-stat">
+                <span class="vx-stat-icon vx-bg-violet">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 8.25h19.5M2.25 9h19.5m-16.5 5.25h6m-6 2.25h3m-3.75 3h15a2.25 2.25 0 0 0 2.25-2.25V6.75A2.25 2.25 0 0 0 19.5 4.5h-15a2.25 2.25 0 0 0-2.25 2.25v10.5A2.25 2.25 0 0 0 4.5 19.5Z"/></svg>
+                </span>
+                <div class="min-w-0">
+                    <p class="vx-stat-label">Transfer</p>
+                    <p class="vx-stat-value">{{ format_rupiah($paymentTotals['transfer']) }}</p>
+                </div>
+            </div>
+            <div class="vx-stat">
+                <span class="vx-stat-icon vx-bg-warning">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 0 1 3.75 9.375v-4.5ZM3.75 14.625c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5a1.125 1.125 0 0 1-1.125-1.125v-4.5ZM13.5 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 0 1 13.5 9.375v-4.5Z"/><path stroke-linecap="round" stroke-linejoin="round" d="M6.375 7.5h.008v.008H6.375V7.5Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0ZM6.375 17.25h.008v.008H6.375v-.008Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0ZM16.125 7.5h.008v.008h-.008V7.5Zm.375 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Z"/><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 14.625v4.5m3-2.25h-6"/></svg>
+                </span>
+                <div class="min-w-0">
+                    <p class="vx-stat-label">QRIS</p>
+                    <p class="vx-stat-value">{{ format_rupiah($paymentTotals['qris']) }}</p>
+                </div>
+            </div>
         </div>
     </div>
 
