@@ -146,7 +146,7 @@ class ReportController extends Controller
 
         Transaction::paid()
             ->whereBetween('created_at', [$rangeStart, $rangeEnd])
-            ->select(['total', 'metode_pembayaran', 'payment_splits'])
+            ->select(['id', 'total', 'metode_pembayaran', 'payment_splits'])
             ->chunkById(500, function ($rows) use (&$totals) {
                 foreach ($rows as $transaction) {
                     $splits = $transaction->payment_splits;
