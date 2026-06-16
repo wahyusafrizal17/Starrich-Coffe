@@ -6,6 +6,7 @@ use App\Http\Controllers\Admin\ExpenseController;
 use App\Http\Controllers\Admin\OrderAddonController;
 use App\Http\Controllers\Admin\ProductController;
 use App\Http\Controllers\Admin\ReportController;
+use App\Http\Controllers\Admin\SettingsController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\CashierController;
 use App\Http\Controllers\DashboardController;
@@ -31,6 +32,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('/kasir/open-bills/{transaction}/pay', [CashierController::class, 'payOpenBill'])->name('cashier.open-bills.pay');
         Route::delete('/kasir/open-bills/{transaction}', [CashierController::class, 'destroyOpenBill'])->name('cashier.open-bills.destroy');
         Route::get('/kasir/history', [CashierController::class, 'history'])->name('cashier.history');
+        Route::patch('/kasir/history/{transaction}/payment', [CashierController::class, 'updateTransactionPayment'])->name('cashier.history.update-payment');
         Route::get('/kasir/struk/{transaction}', [CashierController::class, 'invoice'])->name('cashier.invoice');
     });
 
@@ -51,6 +53,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('laporan', [ReportController::class, 'index'])->name('reports.index');
         Route::get('laporan/export', [ReportController::class, 'export'])->name('reports.export');
         Route::get('laporan/laba-rugi', [ReportController::class, 'profitLoss'])->name('reports.profit-loss');
+
+        Route::get('pengaturan', [SettingsController::class, 'edit'])->name('settings.edit');
+        Route::put('pengaturan', [SettingsController::class, 'update'])->name('settings.update');
     });
 
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');

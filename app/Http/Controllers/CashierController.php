@@ -129,6 +129,68 @@ class CashierController extends Controller
         ]);
     }
 
+    public function updateTransactionPayment(Request $request, Transaction $transaction): JsonResponse
+    {
+        if (! $transaction->isPaid()) {
+            return response()->json([
+                'ok' => false,
+                'message' => 'Hanya transaksi lunas yang bisa diubah metode pembayarannya.',
+            ], 422);
+        }
+
+        $data = $request->validate([
+            'metode' => ['nullable', 'string', 'in:cash,transfer,qris'],
+            'payment_splits' => ['nullable', 'array', 'min:1'],
+            'payment_splits.*.metode' => ['required_with:payment_splits', 'string', 'in:cash,transfer,qris'],
+            'payment_splits.*.jumlah' => ['required_with:payment_splits', 'integer', 'min:0'],
+        ]);
+
+        if (empty($data['metode']) && empty($data['payment_splits'])) {
+            throw ValidationException::withMessages([
+                'metode' => 'Pilih metode pembayaran.',
+            ]);
+        }
+
+        if (! empty($data['payment_splits'])) {
+            $splits = $this->normalizePaymentSplits($data['payment_splits']);
+            $splitSum = (int) collect($splits)->sum('jumlah');
+
+            if ($splitSum !== (int) $transaction->bayar) {
+                throw ValidationException::withMessages([
+                    'payment_splits' => 'Total pembayaran harus sama dengan nominal bayar transaksi.',
+                ]);
+            }
+
+            $metodeLabel = count($splits) > 1 ? 'split' : $splits[0]['metode'];
+        } else {
+            $existing = is_array($transaction->payment_splits) ? $transaction->payment_splits : [];
+
+            if (count($existing) > 1) {
+                throw ValidationException::withMessages([
+                    'metode' => 'Transaksi split: ubah metode pada masing-masing pembayaran.',
+                ]);
+            }
+
+            $jumlah = isset($existing[0]['jumlah'])
+                ? (int) $existing[0]['jumlah']
+                : (int) $transaction->bayar;
+
+            $splits = [['metode' => $data['metode'], 'jumlah' => $jumlah]];
+            $metodeLabel = $data['metode'];
+        }
+
+        $transaction->update([
+            'metode_pembayaran' => $metodeLabel,
+            'payment_splits' => $splits,
+        ]);
+
+        return response()->json([
+            'ok' => true,
+            'message' => 'Metode pembayaran diperbarui.',
+            'metode_pembayaran' => $metodeLabel,
+        ]);
+    }
+
     public function openBills(): JsonResponse
     {
         return response()->json([

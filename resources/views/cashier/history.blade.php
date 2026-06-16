@@ -86,12 +86,27 @@
                                 </p>
                             </div>
                             <div>
-                                <span class="ch-method {{ $t->isOpen() ? 'open_bill' : (in_array($method, ['cash','transfer','qris','split','open_bill']) ? $method : '') }}">
+                                <span class="ch-method js-method-badge {{ $t->isOpen() ? 'open_bill' : (in_array($method, ['cash','transfer','qris','split','open_bill']) ? $method : '') }}">
                                     {{ $methodLabel }}
                                 </span>
                             </div>
                             <div class="ch-total">{{ format_rupiah($t->total) }}</div>
                             <div class="ch-actions">
+                                @if ($t->isPaid())
+                                    <button
+                                        type="button"
+                                        class="ch-icon-btn js-edit-payment"
+                                        title="Ubah metode pembayaran"
+                                        aria-label="Ubah metode pembayaran"
+                                        data-trx-label="#{{ str_pad($t->id, 5, '0', STR_PAD_LEFT) }}"
+                                        data-method="{{ $method }}"
+                                        data-is-split="{{ $method === 'split' ? '1' : '0' }}"
+                                        data-payment-splits='@json($t->payment_splits ?? [])'
+                                        data-update-url="{{ route('cashier.history.update-payment', $t) }}"
+                                    >
+                                        <svg viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0 1 15.75 21H5.25A2.25 2.25 0 0 1 3 18.75V8.25A2.25 2.25 0 0 1 5.25 6H10"/></svg>
+                                    </button>
+                                @endif
                                 <a href="{{ route('cashier.invoice', $t) }}" class="ch-icon-btn" title="Lihat struk" aria-label="Lihat struk" target="_blank" rel="noopener">
                                     <svg viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178Z"/><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"/></svg>
                                 </a>
@@ -108,3 +123,140 @@
         </div>
     </div>
 @endsection
+
+@push('scripts')
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const METHODS = [
+                { value: 'cash', label: 'Cash' },
+                { value: 'transfer', label: 'Transfer' },
+                { value: 'qris', label: 'QRIS' },
+            ];
+
+            function methodSelect(name, selected) {
+                const opts = METHODS.map(function (m) {
+                    const sel = m.value === selected ? ' selected' : '';
+                    return '<option value="' + m.value + '"' + sel + '>' + m.label + '</option>';
+                }).join('');
+                return '<select class="ch-input" name="' + name + '" style="width:100%">' + opts + '</select>';
+            }
+
+            function formatRp(n) {
+                return 'Rp ' + new Intl.NumberFormat('id-ID').format(Number(n) || 0);
+            }
+
+            function showToast(message, isError) {
+                try {
+                    if (typeof Alpine !== 'undefined') {
+                        Alpine.store('toast').show(message, isError ? 'error' : 'success');
+                    }
+                } catch (e) {
+                    alert(message);
+                }
+            }
+
+            document.querySelectorAll('.js-edit-payment').forEach(function (btn) {
+                btn.addEventListener('click', function () {
+                    if (typeof Swal === 'undefined') {
+                        showToast('Dialog belum siap. Muat ulang halaman.', true);
+                        return;
+                    }
+
+                    const trxLabel = btn.getAttribute('data-trx-label') || '';
+                    const isSplit = btn.getAttribute('data-is-split') === '1';
+                    const currentMethod = btn.getAttribute('data-method') || 'cash';
+                    let splits = [];
+                    try {
+                        splits = JSON.parse(btn.getAttribute('data-payment-splits') || '[]');
+                    } catch (e) {
+                        splits = [];
+                    }
+
+                    let html = '<p style="margin:0 0 12px;font-size:13px;color:#64748b">Transaksi ' + trxLabel + '</p>';
+
+                    if (isSplit && splits.length > 1) {
+                        html += '<div style="display:flex;flex-direction:column;gap:10px">';
+                        splits.forEach(function (split, idx) {
+                            html += '<div style="display:flex;align-items:center;gap:10px">'
+                                + '<div style="flex:1;font-size:13px;font-weight:600;color:#334155">' + formatRp(split.jumlah) + '</div>'
+                                + '<div style="flex:1">' + methodSelect('split_metode_' + idx, split.metode || 'cash') + '</div>'
+                                + '</div>';
+                        });
+                        html += '</div>';
+                    } else {
+                        const selected = splits[0]?.metode || currentMethod;
+                        html += methodSelect('metode', selected === 'split' ? 'cash' : selected);
+                    }
+
+                    Swal.fire({
+                        title: 'Ubah metode pembayaran',
+                        html: html,
+                        showCancelButton: true,
+                        confirmButtonText: 'Simpan',
+                        cancelButtonText: 'Batal',
+                        buttonsStyling: false,
+                        customClass: {
+                            confirmButton: 'swal-btn-primary',
+                            cancelButton: 'swal-btn-ghost',
+                            popup: 'swal-popup-pos',
+                        },
+                        focusConfirm: false,
+                        preConfirm: function () {
+                            const popup = Swal.getPopup();
+                            if (isSplit && splits.length > 1) {
+                                const payload = splits.map(function (split, idx) {
+                                    const select = popup.querySelector('[name="split_metode_' + idx + '"]');
+                                    return {
+                                        metode: select ? select.value : split.metode,
+                                        jumlah: Number(split.jumlah) || 0,
+                                    };
+                                });
+                                return { payment_splits: payload };
+                            }
+                            const select = popup.querySelector('[name="metode"]');
+                            if (! select || ! select.value) {
+                                Swal.showValidationMessage('Pilih metode pembayaran.');
+                                return false;
+                            }
+                            return { metode: select.value };
+                        },
+                    }).then(function (result) {
+                        if (! result.isConfirmed || ! result.value) {
+                            return;
+                        }
+
+                        const csrf = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+                        fetch(btn.getAttribute('data-update-url'), {
+                            method: 'PATCH',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                Accept: 'application/json',
+                                'X-CSRF-TOKEN': csrf,
+                                'X-Requested-With': 'XMLHttpRequest',
+                            },
+                            body: JSON.stringify(result.value),
+                        })
+                            .then(function (res) {
+                                return res.json().then(function (data) {
+                                    return { ok: res.ok, data: data };
+                                });
+                            })
+                            .then(function ({ ok, data }) {
+                                if (! ok || ! data.ok) {
+                                    const msg = data.message
+                                        || (data.errors ? Object.values(data.errors).flat().join(' ') : 'Gagal menyimpan.');
+                                    showToast(msg, true);
+                                    return;
+                                }
+                                showToast(data.message || 'Metode pembayaran diperbarui.', false);
+                                window.location.reload();
+                            })
+                            .catch(function () {
+                                showToast('Koneksi bermasalah.', true);
+                            });
+                    });
+                });
+            });
+        });
+    </script>
+@endpush

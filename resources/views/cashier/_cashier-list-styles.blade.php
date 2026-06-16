@@ -74,8 +74,9 @@
     .ch-actions { display: flex; flex-wrap: wrap; gap: 6px; justify-content: flex-end; }
     .ch-icon-btn {
         display: inline-flex; align-items: center; justify-content: center;
-        width: 34px; height: 34px; border-radius: 10px; border: 1px solid var(--caramel-light);
+        width: 34px; height: 34px; padding: 0; border-radius: 10px; border: 1px solid var(--caramel-light);
         background: #fff; color: var(--brown-mid); cursor: pointer; text-decoration: none;
+        font: inherit; appearance: none; -webkit-appearance: none;
         transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
     }
     .ch-icon-btn:hover { background: var(--caramel); color: #fff; border-color: var(--caramel); }
