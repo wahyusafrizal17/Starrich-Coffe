@@ -8,56 +8,77 @@
         <title>@yield('title', 'Admin') — {{ config('app.name', 'Starrich') }}</title>
 
         <link rel="preconnect" href="https://fonts.bunny.net">
-        <link href="https://fonts.bunny.net/css?family=plus-jakarta-sans:400,500,600,700,800&display=swap" rel="stylesheet" />
+        <link href="https://fonts.bunny.net/css?family=inter:400,500,600,700,800&display=swap" rel="stylesheet" />
 
         @include('partials.pwa-head')
 
         @vite(['resources/css/app.css', 'resources/js/app.js'])
         <style>
             [x-cloak] { display: none !important; }
-            body { font-family: 'Plus Jakarta Sans', ui-sans-serif, system-ui, sans-serif; }
+            body { font-family: 'Inter', ui-sans-serif, system-ui, sans-serif; }
         </style>
         @include('partials.admin-styles')
     </head>
-    <body class="vx-app h-full overflow-hidden text-slate-900" x-data="{ sidebarOpen: false }">
+    <body
+        class="vx-app h-full overflow-hidden text-slate-900 antialiased"
+        x-data="{
+            sidebarOpen: localStorage.getItem('sidebarOpen') !== 'false',
+            mobileOpen: false,
+        }"
+        x-init="$watch('sidebarOpen', v => localStorage.setItem('sidebarOpen', v))"
+    >
         @include('partials.flash-bridge')
 
-        <div class="flex h-screen items-stretch overflow-hidden">
-            @include('partials.admin-sidebar')
+        <div class="flex h-screen overflow-hidden">
+            <div
+                class="vx-sidebar-shell hidden lg:block"
+                :class="{ 'is-collapsed': !sidebarOpen }"
+            >
+                @include('partials.admin-sidebar')
+            </div>
 
             <div
-                class="fixed inset-0 z-40 bg-slate-900/35 backdrop-blur-sm transition-opacity lg:hidden"
-                x-show="sidebarOpen"
+                class="vx-sidebar-shell lg:hidden"
+                :class="mobileOpen ? 'is-open' : 'is-collapsed'"
+            >
+                @include('partials.admin-sidebar')
+            </div>
+
+            <div
+                class="fixed inset-0 z-40 bg-slate-900/40 backdrop-blur-sm transition-opacity lg:hidden"
+                x-show="mobileOpen"
                 x-transition.opacity
-                x-on:click="sidebarOpen = false"
+                x-on:click="mobileOpen = false"
                 x-cloak
             ></div>
 
-            <div class="flex min-h-0 min-w-0 flex-1 flex-col">
+            <div class="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
                 <header class="vx-topbar">
                     <div class="vx-topbar-inner">
                         <button
                             type="button"
                             class="vx-topbar-burger lg:hidden"
-                            x-on:click="sidebarOpen = !sidebarOpen"
+                            x-on:click="mobileOpen = !mobileOpen"
                             aria-label="Buka menu"
                         >
                             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16"/>
                             </svg>
                         </button>
+                        <button
+                            type="button"
+                            class="vx-topbar-burger hidden lg:inline-flex"
+                            x-on:click="sidebarOpen = !sidebarOpen"
+                            :title="sidebarOpen ? 'Tutup sidebar' : 'Buka sidebar'"
+                            aria-label="Toggle sidebar"
+                        >
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16"/>
+                            </svg>
+                        </button>
 
-                        <div class="min-w-0">
-                            <h1 class="vx-topbar-title truncate">@yield('title', 'Admin')</h1>
-                            <div class="vx-breadcrumbs">
-                                @hasSection('breadcrumbs')
-                                    @yield('breadcrumbs')
-                                @else
-                                    <a href="{{ route('dashboard') }}">Beranda</a>
-                                    <span class="vx-sep">/</span>
-                                    <span class="vx-current">@yield('title', 'Admin')</span>
-                                @endif
-                            </div>
+                        <div class="min-w-0 hidden sm:block">
+                            <p class="vx-topbar-context">Panel Admin · {{ config('app.name', 'Starrich') }}</p>
                         </div>
 
                         <div class="vx-topbar-user" x-data="{ userMenu: false }" x-on:keydown.escape.window="userMenu = false">
@@ -70,7 +91,7 @@
                             >
                                 <div class="hidden sm:block vx-meta">
                                     <strong>{{ auth()->user()->name }}</strong>
-                                    <small>{{ ucfirst(auth()->user()->role) }}</small>
+                                    <small>{{ auth()->user()->email }}</small>
                                 </div>
                                 <span class="vx-avatar" aria-hidden="true">
                                     {{ \Illuminate\Support\Str::of(auth()->user()->name)->trim()->upper()->substr(0, 1) }}
@@ -90,8 +111,8 @@
                                     <small>{{ auth()->user()->email }}</small>
                                 </div>
                                 <a href="{{ route('profile.edit') }}" class="vx-user-menu-item" role="menuitem">
-                                    <svg viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.5 20.25a7.5 7.5 0 0 1 15 0v.75H4.5v-.75Z"/></svg>
-                                    Profil saya
+                                    <svg viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.127.763.42 1.484.848 2.07L17.25 9.75a1.125 1.125 0 0 1 0 1.59l-2.036 2.036a1.125 1.125 0 0 1-1.59 0l-1.214-1.214a7.461 7.461 0 0 0-1.624-.948l-.213-1.281c-.09-.543-.56-.94-1.11-.94h-1.094c-.55 0-1.02-.397-1.11-.94l-.213-1.281a7.46 7.46 0 0 1-1.624-.948l-1.214.461a1.125 1.125 0 0 1-1.37-.488l-.547-.948a1.125 1.125 0 0 1 .26-1.43l1.003-.827a7.541 7.541 0 0 1 0-1.875l-1.003-.827a1.125 1.125 0 0 1-.26-1.43l.547-.948a1.125 1.125 0 0 1 1.37-.49l1.214.461a7.461 7.461 0 0 1 1.624-.948l.213-1.28ZM12 15.75a3.75 3.75 0 1 0 0-7.5 3.75 3.75 0 0 0 0 7.5Z"/></svg>
+                                    Pengaturan
                                 </a>
                                 <div class="vx-user-menu-sep"></div>
                                 <form method="POST" action="{{ route('logout') }}">
@@ -106,7 +127,7 @@
                     </div>
                 </header>
 
-                <main class="min-h-0 flex-1 overflow-auto p-4 sm:p-6 lg:p-8">
+                <main class="min-h-0 flex-1 overflow-auto p-6 lg:p-8">
                     @include('partials.billing-due-alerts')
 
                     @hasSection('page_header')

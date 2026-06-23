@@ -6,45 +6,71 @@ use App\Http\Controllers\Controller;
 use App\Models\Asset;
 use App\Models\Expense;
 use App\Models\Transaction;
+use App\Support\DashboardPeriodResolver;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class ReportController extends Controller
 {
+    /** @var list<string> */
+    private const COLUMN_FILTER_KEYS = [
+        'filter_id',
+        'filter_waktu',
+        'filter_kasir',
+        'filter_pembayaran',
+        'filter_total',
+    ];
+
     public function index(Request $request): View
     {
-        $from = $request->date('from') ?? now()->startOfMonth();
-        $to = $request->date('to') ?? now()->endOfDay();
+        $period = DashboardPeriodResolver::fromRequest($request, 'bulanan');
+        $periodLabel = DashboardPeriodResolver::label($period);
+        $filterQuery = DashboardPeriodResolver::queryParams($period);
+        $columnFilters = $this->columnFiltersFromRequest($request);
+        $exportQuery = array_merge($filterQuery, array_filter($columnFilters, fn (string $v) => $v !== ''));
+
+        $rangeStart = $period['dari'];
+        $rangeEnd = $period['sampai'];
 
         $base = Transaction::paid()
             ->with(['user', 'details.product'])
-            ->whereBetween('created_at', [$from->copy()->startOfDay(), $to->copy()->endOfDay()]);
+            ->whereBetween('created_at', [$rangeStart, $rangeEnd]);
 
-        $rangeStart = $from->copy()->startOfDay();
-        $rangeEnd = $to->copy()->endOfDay();
+        $this->applyColumnFilters($base, $columnFilters);
 
         $sumTotal = (int) (clone $base)->sum('total');
-        $paymentTotals = $this->paymentTotalsByMethod($rangeStart, $rangeEnd);
-        $openBillTotal = (int) Transaction::open()->sum('total');
-        $openBillCount = (int) Transaction::open()->count();
+        $openBills = Transaction::open()
+            ->with(['user', 'details.product'])
+            ->latest()
+            ->get();
+        $openBillTotal = (int) $openBills->sum('total');
+        $openBillCount = $openBills->count();
         $transactions = (clone $base)->latest()->paginate(20)->withQueryString();
+        $hasActiveColumnFilters = collect($columnFilters)->contains(fn (string $v) => $v !== '');
 
         return view('admin.reports.index', compact(
             'transactions',
             'sumTotal',
-            'paymentTotals',
             'openBillTotal',
             'openBillCount',
-            'from',
-            'to',
+            'openBills',
+            'period',
+            'periodLabel',
+            'filterQuery',
+            'columnFilters',
+            'exportQuery',
+            'hasActiveColumnFilters',
         ));
     }
 
     public function export(Request $request): StreamedResponse
     {
-        $from = $request->date('from') ?? now()->startOfMonth();
-        $to = $request->date('to') ?? now()->endOfDay();
+        $period = DashboardPeriodResolver::fromRequest($request, 'bulanan');
+        $from = $period['dari'];
+        $to = $period['sampai'];
+        $columnFilters = $this->columnFiltersFromRequest($request);
 
         $filename = 'laporan-penjualan-'.$from->format('Ymd').'-'.$to->format('Ymd').'.csv';
 
@@ -53,21 +79,25 @@ class ReportController extends Controller
             'Content-Disposition' => 'attachment; filename="'.$filename.'"',
         ];
 
-        return response()->stream(function () use ($from, $to) {
+        return response()->stream(function () use ($from, $to, $columnFilters) {
             $out = fopen('php://output', 'w');
             fwrite($out, "\xEF\xBB\xBF");
-            fputcsv($out, ['ID', 'Tanggal', 'Kasir', 'Total', 'Bayar', 'Kembalian']);
+            fputcsv($out, ['ID', 'Tanggal', 'Kasir', 'Pembayaran', 'Total', 'Bayar', 'Kembalian']);
 
-            Transaction::paid()
+            $query = Transaction::paid()
                 ->with('user')
-                ->whereBetween('created_at', [$from->copy()->startOfDay(), $to->copy()->endOfDay()])
-                ->oldest()
+                ->whereBetween('created_at', [$from, $to]);
+
+            $this->applyColumnFilters($query, $columnFilters);
+
+            $query->oldest()
                 ->chunk(200, function ($rows) use ($out) {
                     foreach ($rows as $t) {
                         fputcsv($out, [
                             $t->id,
                             $t->created_at->format('Y-m-d H:i:s'),
                             $t->user?->name,
+                            $t->paymentMethodLabel(),
                             $t->total,
                             $t->bayar,
                             $t->kembalian,
@@ -81,11 +111,13 @@ class ReportController extends Controller
 
     public function profitLoss(Request $request): View
     {
-        $from = $request->date('from') ?? now()->startOfMonth();
-        $to = $request->date('to') ?? now()->endOfDay();
+        $period = DashboardPeriodResolver::fromRequest($request, 'bulanan');
+        $periodLabel = DashboardPeriodResolver::label($period);
+        $periodTitle = DashboardPeriodResolver::title($period);
+        $filterQuery = DashboardPeriodResolver::queryParams($period);
 
-        $rangeStart = $from->copy()->startOfDay();
-        $rangeEnd = $to->copy()->endOfDay();
+        $rangeStart = $period['dari'];
+        $rangeEnd = $period['sampai'];
 
         $revenue = (int) Transaction::paid()
             ->whereBetween('created_at', [$rangeStart, $rangeEnd])
@@ -119,10 +151,13 @@ class ReportController extends Controller
 
         $operatingCost = $totalExpenses + $totalDepreciation;
         $netIncome = $revenue - $operatingCost;
+        $profitShare30 = (int) round($netIncome * 0.30);
 
         return view('admin.reports.profit-loss', [
-            'from' => $from,
-            'to' => $to,
+            'period' => $period,
+            'periodLabel' => $periodLabel,
+            'periodTitle' => $periodTitle,
+            'filterQuery' => $filterQuery,
             'revenue' => $revenue,
             'expenseLines' => $expenseLines,
             'totalExpenses' => $totalExpenses,
@@ -130,45 +165,49 @@ class ReportController extends Controller
             'totalDepreciation' => $totalDepreciation,
             'operatingCost' => $operatingCost,
             'netIncome' => $netIncome,
+            'profitShare30' => $profitShare30,
         ]);
     }
 
-    /**
-     * @return array{cash: int, transfer: int, qris: int}
-     */
-    private function paymentTotalsByMethod(\Illuminate\Support\Carbon $rangeStart, \Illuminate\Support\Carbon $rangeEnd): array
+    /** @return array<string, string> */
+    private function columnFiltersFromRequest(Request $request): array
     {
-        $totals = [
-            'cash' => 0,
-            'transfer' => 0,
-            'qris' => 0,
-        ];
+        $filters = [];
+        foreach (self::COLUMN_FILTER_KEYS as $key) {
+            $filters[$key] = $request->string($key)->trim()->toString();
+        }
 
-        Transaction::paid()
-            ->whereBetween('created_at', [$rangeStart, $rangeEnd])
-            ->select(['id', 'total', 'metode_pembayaran', 'payment_splits'])
-            ->chunkById(500, function ($rows) use (&$totals) {
-                foreach ($rows as $transaction) {
-                    $splits = $transaction->payment_splits;
+        return $filters;
+    }
 
-                    if (is_array($splits) && $splits !== []) {
-                        foreach ($splits as $split) {
-                            $method = $split['metode'] ?? null;
-                            if (is_string($method) && array_key_exists($method, $totals)) {
-                                $totals[$method] += (int) ($split['jumlah'] ?? 0);
-                            }
-                        }
+    /** @param Builder<Transaction> $query */
+    private function applyColumnFilters(Builder $query, array $filters): void
+    {
+        if ($filters['filter_id'] !== '') {
+            $id = preg_replace('/\D/', '', $filters['filter_id']);
+            if ($id !== '') {
+                $query->where('id', 'like', '%'.$id.'%');
+            }
+        }
 
-                        continue;
-                    }
+        if ($filters['filter_waktu'] !== '') {
+            $query->whereDate('created_at', $filters['filter_waktu']);
+        }
 
-                    $method = $transaction->metode_pembayaran ?? 'cash';
-                    if (array_key_exists($method, $totals)) {
-                        $totals[$method] += (int) $transaction->total;
-                    }
-                }
-            });
+        if ($filters['filter_kasir'] !== '') {
+            $needle = '%'.$filters['filter_kasir'].'%';
+            $query->whereHas('user', fn (Builder $userQuery) => $userQuery->where('name', 'like', $needle));
+        }
 
-        return $totals;
+        if ($filters['filter_pembayaran'] !== '') {
+            $query->where('metode_pembayaran', $filters['filter_pembayaran']);
+        }
+
+        if ($filters['filter_total'] !== '') {
+            $digits = preg_replace('/\D/', '', $filters['filter_total']);
+            if ($digits !== '') {
+                $query->where('total', 'like', '%'.$digits.'%');
+            }
+        }
     }
 }

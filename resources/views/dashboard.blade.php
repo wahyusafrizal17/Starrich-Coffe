@@ -2,32 +2,44 @@
 
 @section('title', 'Dashboard')
 
-@section('page_header')
-    <div>
-        <h1>Selamat datang, {{ auth()->user()->name }} 👋</h1>
-        <p>Ringkasan singkat penjualan dan performa toko hari ini.</p>
-    </div>
-@endsection
-
 @section('content')
-    <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-        <div class="vx-stat">
-            <span class="vx-stat-icon vx-bg-success">
-                <svg viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8c-1.657 0-3 .896-3 2s1.343 2 3 2 3 .896 3 2-1.343 2-3 2m0-8V6m0 12v-2m9-4a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/></svg>
-            </span>
-            <div class="min-w-0">
-                <p class="vx-stat-label">Penjualan hari ini</p>
-                <p class="vx-stat-value">{{ format_rupiah($todayTotal) }}</p>
+    @include('partials.dashboard-filter-strip', ['period' => $period])
+
+    <div class="vx-hero-strip">
+        <div>
+            <p class="vx-hero-eyebrow">{{ $periodTitle }}</p>
+            <p class="vx-hero-value">{{ format_rupiah($periodTotal) }}</p>
+            <p class="vx-hero-sub">Selamat datang, {{ auth()->user()->name }} · {{ $periodLabel }}</p>
+        </div>
+        <div class="vx-hero-stats">
+            <div class="vx-hero-stat">
+                <label>Transaksi</label>
+                <strong>{{ number_format($periodCount, 0, ',', '.') }}</strong>
+            </div>
+            <div class="vx-hero-stat">
+                <label>Cash</label>
+                <strong class="is-green">{{ format_rupiah($paymentTotals['cash']) }}</strong>
+            </div>
+            <div class="vx-hero-stat">
+                <label>Transfer</label>
+                <strong class="is-blue">{{ format_rupiah($paymentTotals['transfer']) }}</strong>
+            </div>
+            <div class="vx-hero-stat">
+                <label>QRIS</label>
+                <strong class="is-amber">{{ format_rupiah($paymentTotals['qris']) }}</strong>
             </div>
         </div>
+    </div>
 
+    <p class="vx-section-title">Ringkasan</p>
+    <div class="mb-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
         <div class="vx-stat">
             <span class="vx-stat-icon vx-bg-primary">
                 <svg viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 8.25h19.5M3.75 6.75A1.5 1.5 0 0 1 5.25 5.25h13.5A1.5 1.5 0 0 1 20.25 6.75v10.5a1.5 1.5 0 0 1-1.5 1.5H5.25a1.5 1.5 0 0 1-1.5-1.5V6.75ZM7.5 11.25h.008v.008H7.5v-.008Z"/></svg>
             </span>
             <div class="min-w-0">
-                <p class="vx-stat-label">Transaksi hari ini</p>
-                <p class="vx-stat-value">{{ $todayCount }}</p>
+                <p class="vx-stat-label">Jumlah transaksi</p>
+                <p class="vx-stat-value">{{ $periodCount }}</p>
             </div>
         </div>
 
@@ -36,29 +48,39 @@
                 <svg viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M3 13.5 9 7.5l3.75 3.75L21 4.5M21 4.5h-4.5M21 4.5V9m0 10.5H3"/></svg>
             </span>
             <div class="min-w-0">
-                <p class="vx-stat-label">Pendapatan bulan ini</p>
-                <p class="vx-stat-value">{{ format_rupiah($monthlyTotal) }}</p>
+                <p class="vx-stat-label">Rata-rata per transaksi</p>
+                <p class="vx-stat-value">{{ format_rupiah($averagePerTransaction) }}</p>
+            </div>
+        </div>
+
+        <div class="vx-stat">
+            <span class="vx-stat-icon vx-bg-success">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8c-1.657 0-3 .896-3 2s1.343 2 3 2 3 .896 3 2-1.343 2-3 2m0-8V6m0 12v-2m9-4a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/></svg>
+            </span>
+            <div class="min-w-0">
+                <p class="vx-stat-label">Total pembayaran</p>
+                <p class="vx-stat-value">{{ format_rupiah($paymentGrandTotal) }}</p>
             </div>
         </div>
     </div>
 
-    <div class="mt-6 grid gap-4 lg:grid-cols-3">
+    <div class="grid gap-4 lg:grid-cols-3">
         <div class="vx-card lg:col-span-2">
             <div class="vx-card-head">
                 <div>
                     <h2>Produk terlaris</h2>
-                    <p>Berdasarkan jumlah unit terjual sepanjang waktu.</p>
+                    <p>Berdasarkan jumlah unit terjual pada {{ strtolower($periodLabel) }}.</p>
                 </div>
                 <a href="{{ route('admin.products.index') }}" class="vx-btn vx-btn-ghost vx-btn-sm">
                     Lihat produk
                 </a>
             </div>
             <ul class="divide-y divide-[var(--vx-border-soft)]">
-                @forelse ($topProducts as $row)
+                @forelse ($topProducts as $index => $row)
                     <li class="flex items-center justify-between gap-4 px-5 py-4">
                         <div class="flex items-center gap-3 min-w-0">
-                            <span class="vx-thumb-placeholder" aria-hidden="true">
-                                {{ \Illuminate\Support\Str::of($row->product->nama_produk ?? '—')->substr(0, 1)->upper() }}
+                            <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[var(--vx-primary)] text-xs font-bold text-white">
+                                {{ $index + 1 }}
                             </span>
                             <div class="min-w-0">
                                 <p class="truncate text-sm font-semibold text-slate-900">
@@ -72,7 +94,7 @@
                         <span class="vx-badge vx-badge-primary">{{ $row->qty_sold }} terjual</span>
                     </li>
                 @empty
-                    <li class="px-5 py-12 text-center text-sm text-slate-500">Belum ada data penjualan.</li>
+                    <li class="px-5 py-12 text-center text-sm text-slate-500">Belum ada data penjualan pada periode ini.</li>
                 @endforelse
             </ul>
         </div>
@@ -86,7 +108,7 @@
                 <svg viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 3h1.5l1.05 4.2M6 16.5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0Zm12 0a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0Zm-12-3h12.36a1.5 1.5 0 0 0 1.47-1.2L21.75 6H4.8"/></svg>
                 Buka kasir
             </a>
-            <a href="{{ route('admin.products.create') }}" class="vx-btn vx-btn-soft w-full">
+            <a href="{{ route('admin.products.index', ['modal' => 'create']) }}" class="vx-btn vx-btn-soft w-full">
                 <svg viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/></svg>
                 Tambah produk
             </a>

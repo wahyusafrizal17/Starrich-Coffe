@@ -81,4 +81,81 @@ class BillingDueReminder
 
         return "Pembayaran {$label} jatuh tempo dalam {$days} hari ({$date}).";
     }
+
+    /**
+     * @return array{
+     *     label: string,
+     *     configured: bool,
+     *     due_date: ?string,
+     *     days_remaining: ?int,
+     *     icon: string,
+     *     value: string,
+     *     caption: string
+     * }
+     */
+    public static function billingStatus(string $key, string $label): array
+    {
+        $dateStr = AppSetting::get($key);
+        if (! $dateStr) {
+            return [
+                'label' => $label,
+                'configured' => false,
+                'due_date' => null,
+                'days_remaining' => null,
+                'icon' => 'vx-bg-info',
+                'value' => 'Belum diatur',
+                'caption' => 'Isi tanggal jatuh tempo di bawah',
+            ];
+        }
+
+        $due = Carbon::parse($dateStr)->startOfDay();
+        $days = (int) now()->startOfDay()->diffInDays($due, false);
+        $formatted = $due->translatedFormat('d M Y');
+
+        if ($days < 0) {
+            return [
+                'label' => $label,
+                'configured' => true,
+                'due_date' => $dateStr,
+                'days_remaining' => $days,
+                'icon' => 'vx-bg-danger',
+                'value' => $formatted,
+                'caption' => 'Terlambat '.abs($days).' hari',
+            ];
+        }
+
+        if ($days === 0) {
+            return [
+                'label' => $label,
+                'configured' => true,
+                'due_date' => $dateStr,
+                'days_remaining' => 0,
+                'icon' => 'vx-bg-danger',
+                'value' => $formatted,
+                'caption' => 'Jatuh tempo hari ini',
+            ];
+        }
+
+        if ($days <= self::ALERT_DAYS_BEFORE) {
+            return [
+                'label' => $label,
+                'configured' => true,
+                'due_date' => $dateStr,
+                'days_remaining' => $days,
+                'icon' => $days <= 2 ? 'vx-bg-danger' : 'vx-bg-warning',
+                'value' => $formatted,
+                'caption' => 'Jatuh tempo dalam '.$days.' hari',
+            ];
+        }
+
+        return [
+            'label' => $label,
+            'configured' => true,
+            'due_date' => $dateStr,
+            'days_remaining' => $days,
+            'icon' => 'vx-bg-success',
+            'value' => $formatted,
+            'caption' => 'Aman · '.$days.' hari lagi',
+        ];
+    }
 }

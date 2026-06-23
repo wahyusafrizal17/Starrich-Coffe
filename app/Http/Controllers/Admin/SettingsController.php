@@ -6,18 +6,9 @@ use App\Http\Controllers\Controller;
 use App\Models\AppSetting;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\View\View;
 
 class SettingsController extends Controller
 {
-    public function edit(): View
-    {
-        return view('admin.settings.edit', [
-            'domainDueDate' => AppSetting::get(AppSetting::KEY_DOMAIN_DUE),
-            'hostingDueDate' => AppSetting::get(AppSetting::KEY_HOSTING_DUE),
-        ]);
-    }
-
     public function update(Request $request): RedirectResponse
     {
         $data = $request->validate([
@@ -35,7 +26,7 @@ class SettingsController extends Controller
         );
 
         return redirect()
-            ->route('admin.settings.edit')
+            ->route('profile.edit')
             ->with('success', 'Pengaturan jatuh tempo diperbarui.');
     }
 }

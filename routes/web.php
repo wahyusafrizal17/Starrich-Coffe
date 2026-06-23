@@ -37,30 +37,29 @@ Route::middleware(['auth', 'verified'])->group(function () {
     });
 
     Route::middleware('admin')->prefix('admin')->name('admin.')->group(function () {
-        Route::resource('categories', CategoryController::class)->except(['show']);
-        Route::resource('order-addons', OrderAddonController::class)->except(['show']);
-        Route::resource('products', ProductController::class)->except(['show']);
-        Route::resource('users', UserController::class)->except(['show']);
+        Route::resource('categories', CategoryController::class)->except(['show', 'create', 'edit']);
+        Route::resource('order-addons', OrderAddonController::class)->except(['show', 'create', 'edit']);
+        Route::resource('products', ProductController::class)->except(['show', 'create', 'edit']);
+        Route::resource('users', UserController::class)->except(['show', 'create', 'edit']);
         Route::resource('pengeluaran', ExpenseController::class)
             ->parameters(['pengeluaran' => 'expense'])
             ->names('expenses')
-            ->except(['show']);
+            ->except(['show', 'create', 'edit']);
         Route::resource('aset', AssetController::class)
             ->parameters(['aset' => 'asset'])
             ->names('assets')
-            ->except(['show']);
+            ->except(['show', 'create', 'edit']);
 
         Route::get('laporan', [ReportController::class, 'index'])->name('reports.index');
         Route::get('laporan/export', [ReportController::class, 'export'])->name('reports.export');
         Route::get('laporan/laba-rugi', [ReportController::class, 'profitLoss'])->name('reports.profit-loss');
 
-        Route::get('pengaturan', [SettingsController::class, 'edit'])->name('settings.edit');
         Route::put('pengaturan', [SettingsController::class, 'update'])->name('settings.update');
+        Route::redirect('pengaturan', '/profile');
     });
 
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
-    Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 });
 
 require __DIR__.'/auth.php';

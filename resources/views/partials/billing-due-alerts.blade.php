@@ -19,7 +19,7 @@
                         <p class="text-sm opacity-90">{{ \App\Support\BillingDueReminder::message($alert) }}</p>
                     </div>
                 </div>
-                <a href="{{ route('admin.settings.edit') }}" class="vx-btn vx-btn-ghost shrink-0 self-start sm:self-center {{ $isDanger ? 'border-red-200 text-red-800 hover:bg-red-100' : 'border-amber-200 text-amber-900 hover:bg-amber-100' }}">
+                <a href="{{ route('profile.edit') }}" class="vx-btn vx-btn-ghost shrink-0 self-start sm:self-center {{ $isDanger ? 'border-red-200 text-red-800 hover:bg-red-100' : 'border-amber-200 text-amber-900 hover:bg-amber-100' }}">
                     Kelola pengaturan
                 </a>
             </div>

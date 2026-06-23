@@ -3,10 +3,7 @@
     $isAdmin = $user->isAdmin();
 @endphp
 
-<aside
-    class="vx-sidebar flex shrink-0 flex-col self-stretch lg:static lg:translate-x-0"
-    :class="{ 'is-open': sidebarOpen }"
->
+<aside class="vx-sidebar">
     <div class="vx-sidebar-brand">
         <img
             src="{{ asset('images/logo/logo.png') }}"
@@ -14,6 +11,10 @@
             decoding="async"
             loading="eager"
         />
+        <div class="min-w-0">
+            <p class="vx-sidebar-brand-title">{{ config('app.name', 'Starrich') }}</p>
+            <p class="vx-sidebar-brand-sub">Management System</p>
+        </div>
     </div>
 
     <div class="min-h-0 flex-1 overflow-y-auto">
@@ -80,19 +81,11 @@
 
             <p class="vx-sidebar-section">Sistem</p>
             <nav class="vx-sidebar-nav">
-                <a href="{{ route('admin.settings.edit') }}" class="vx-sidebar-link {{ request()->routeIs('admin.settings.*') ? 'is-active' : '' }}">
+                <a href="{{ route('profile.edit') }}" class="vx-sidebar-link {{ request()->routeIs('profile.*') ? 'is-active' : '' }}">
                     <svg viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.127.763.42 1.484.848 2.07L17.25 9.75a1.125 1.125 0 0 1 0 1.59l-2.036 2.036a1.125 1.125 0 0 1-1.59 0l-1.214-1.214a7.461 7.461 0 0 0-1.624-.948l-.213-1.281c-.09-.543-.56-.94-1.11-.94h-1.094c-.55 0-1.02.397-1.11.94l-.213 1.28a7.46 7.46 0 0 1-1.624.948l-1.214.461a1.125 1.125 0 0 1-1.37-.488l-.547-.948a1.125 1.125 0 0 1 .26-1.43l1.003-.827a7.541 7.541 0 0 1 0-1.875l-1.003-.827a1.125 1.125 0 0 1-.26-1.43l.547-.948a1.125 1.125 0 0 1 1.37-.49l1.214.461a7.461 7.461 0 0 1 1.624-.948l.213-1.28ZM12 15.75a3.75 3.75 0 1 0 0-7.5 3.75 3.75 0 0 0 0 7.5Z"/></svg>
                     Pengaturan
                 </a>
             </nav>
         @endif
-
-        <p class="vx-sidebar-section">Akun</p>
-        <nav class="vx-sidebar-nav">
-            <a href="{{ route('profile.edit') }}" class="vx-sidebar-link {{ request()->routeIs('profile.*') ? 'is-active' : '' }}">
-                <svg viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M10.343 3.94c.09-.542.56-.94 1.11-.94h1.094c.55 0 1.02.398 1.11.94l.213 1.28a7.46 7.46 0 0 1 1.624.948l1.214-.46a1.125 1.125 0 0 1 1.37.488l.547.948a1.125 1.125 0 0 1-.26 1.43l-1.003.827a7.541 7.541 0 0 1 0 1.875l1.003.827a1.125 1.125 0 0 1 .26 1.43l-.547.948a1.125 1.125 0 0 1-1.37.49l-1.214-.461a7.461 7.461 0 0 1-1.624.948l-.213 1.281c-.09.543-.56.94-1.11.94h-1.094c-.55 0-1.02-.397-1.11-.94l-.213-1.281a7.46 7.46 0 0 1-1.624-.948l-1.214.46a1.125 1.125 0 0 1-1.37-.488l-.547-.948a1.125 1.125 0 0 1 .26-1.43l1.003-.827a7.541 7.541 0 0 1 0-1.875l-1.003-.827a1.125 1.125 0 0 1-.26-1.43l.547-.948a1.125 1.125 0 0 1 1.37-.49l1.214.461a7.461 7.461 0 0 1 1.624-.948l.213-1.28ZM12 15.75a3.75 3.75 0 1 0 0-7.5 3.75 3.75 0 0 0 0 7.5Z"/></svg>
-                Profil
-            </a>
-        </nav>
     </div>
 </aside>

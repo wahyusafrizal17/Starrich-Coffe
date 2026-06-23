@@ -73,6 +73,43 @@ class Transaction extends Model
         return $this->hasMany(TransactionDetail::class);
     }
 
+    public function paymentMethodLabel(): string
+    {
+        $method = $this->metode_pembayaran ?? 'cash';
+
+        if ($method === 'split' && is_array($this->payment_splits) && count($this->payment_splits) > 0) {
+            return collect($this->payment_splits)
+                ->pluck('metode')
+                ->map(fn (string $m) => match ($m) {
+                    'cash' => 'Cash',
+                    'transfer' => 'Transfer',
+                    'qris' => 'QRIS',
+                    default => ucfirst($m),
+                })
+                ->implode(' + ');
+        }
+
+        return match ($method) {
+            'cash' => 'Cash',
+            'transfer' => 'Transfer',
+            'qris' => 'QRIS',
+            default => strtoupper($method),
+        };
+    }
+
+    public function paymentMethodBadgeClass(): string
+    {
+        $method = $this->metode_pembayaran ?? 'cash';
+
+        return match ($method) {
+            'cash' => 'vx-badge-success',
+            'transfer' => 'vx-badge-violet',
+            'qris' => 'vx-badge-warning',
+            'split' => 'vx-badge-primary',
+            default => 'vx-badge-slate',
+        };
+    }
+
     /** @return array<string, mixed> */
     public function toOpenBillArray(): array
     {
