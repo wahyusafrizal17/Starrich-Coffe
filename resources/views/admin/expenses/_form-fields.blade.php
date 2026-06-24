@@ -70,9 +70,4 @@
         >{{ old('catatan', $expense?->catatan) }}</textarea>
         <x-input-error :messages="$errors->get('catatan')" />
     </div>
-
-    <div class="rounded-xl border border-[var(--vx-border-soft)] bg-slate-50 p-3 text-xs text-slate-600">
-        <p class="font-semibold text-slate-900">Kategori umum</p>
-        <p class="mt-1">Sewa tempat, maintenance mesin, utilitas, gaji karyawan, bahan baku, dan lainnya.</p>
-    </div>
 </div>
