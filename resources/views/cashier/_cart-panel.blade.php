@@ -54,6 +54,19 @@
         </div>
     </div>
 
+    <div class="pc-cashier-field mb-2" x-show="isAdmin" x-cloak>
+        <label class="pc-cashier-label" for="pc-cashier-name">Kasir yang melayani</label>
+        <input
+            id="pc-cashier-name"
+            type="text"
+            class="pc-cashier-input"
+            x-model="cashierName"
+            placeholder="Ketik nama kasir…"
+            maxlength="100"
+            autocomplete="off"
+        />
+    </div>
+
     <div class="pc-order-summary">
         <div class="pc-summary-row pc-total">
             <span>Total</span>

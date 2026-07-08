@@ -24,10 +24,14 @@
             <p class="vx-hero-value @if($netIncome < 0) is-negative @endif">{{ format_rupiah($netIncome) }}</p>
             <p class="vx-hero-sub">Laba bersih · {{ $periodLabel }}</p>
         </div>
-        <div class="vx-hero-stats is-cols-5">
+        <div class="vx-hero-stats is-cols-6">
             <div class="vx-hero-stat">
-                <label>Pendapatan</label>
-                <strong class="is-green">{{ format_rupiah($revenue) }}</strong>
+                <label>Penjualan</label>
+                <strong class="is-green">{{ format_rupiah($salesRevenue) }}</strong>
+            </div>
+            <div class="vx-hero-stat">
+                <label>Pemasukan / modal</label>
+                <strong class="is-blue">{{ format_rupiah($totalInflows) }}</strong>
             </div>
             <div class="vx-hero-stat">
                 <label>Beban operasional</label>
@@ -75,11 +79,25 @@
                     </tr>
                     <tr class="vx-pl-row">
                         <td>Penjualan kasir</td>
-                        <td>{{ format_rupiah($revenue) }}</td>
+                        <td>{{ format_rupiah($salesRevenue) }}</td>
                     </tr>
+                    @foreach ($inflowLines as $line)
+                        @if ($line['total'] > 0)
+                            <tr class="vx-pl-row">
+                                <td>{{ $line['label'] }}</td>
+                                <td>{{ format_rupiah($line['total']) }}</td>
+                            </tr>
+                        @endif
+                    @endforeach
+                    @if ($totalInflows > 0)
+                        <tr class="vx-pl-subtotal">
+                            <td>Subtotal pemasukan / modal</td>
+                            <td>{{ format_rupiah($totalInflows) }}</td>
+                        </tr>
+                    @endif
                     <tr class="vx-pl-subtotal">
                         <td>Total pendapatan</td>
-                        <td>{{ format_rupiah($revenue) }}</td>
+                        <td>{{ format_rupiah($totalRevenue) }}</td>
                     </tr>
 
                     <tr class="vx-pl-section is-spaced">

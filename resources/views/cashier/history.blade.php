@@ -74,7 +74,7 @@
                             <div>
                                 <p class="ch-id">#{{ str_pad($t->id, 5, '0', STR_PAD_LEFT) }}</p>
                                 <p class="ch-trx-title">{{ $t->created_at->format('d M Y · H:i') }}</p>
-                                <p class="ch-trx-meta">Kasir: {{ $t->user?->name ?? '—' }}</p>
+                                <p class="ch-trx-meta">Kasir: {{ $t->cashierDisplayName() }}</p>
                                 @if ($t->nama_pelanggan)
                                     <p class="ch-trx-meta">Pelanggan: {{ $t->nama_pelanggan }}</p>
                                 @endif

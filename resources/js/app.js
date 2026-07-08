@@ -56,6 +56,8 @@ window.StarrichPos = function StarrichPos(payload) {
         pendingLineProduct: null,
         pendingLineSuhu: null,
         openBillName: '',
+        cashierName: '',
+        isAdmin: Boolean(payload.isAdmin),
         paymentSplits: [{ metode: 'cash', jumlah: '' }],
 
         init() {
@@ -141,6 +143,13 @@ window.StarrichPos = function StarrichPos(payload) {
 
         openPaymentModal() {
             if (this.cart.length === 0) {
+                return;
+            }
+            if (this.isAdmin && ! this.cashierName.trim()) {
+                Alpine.store('toast').show('Isi nama kasir yang melayani.', 'error');
+                if (window.innerWidth < 1024) {
+                    this.cartOpen = true;
+                }
                 return;
             }
             this.settlingBill = null;
@@ -387,6 +396,7 @@ window.StarrichPos = function StarrichPos(payload) {
                 const d = data.data;
                 this.editingOpenBillId = d.id;
                 this.openBillName = d.nama_pelanggan || '';
+                this.cashierName = d.nama_kasir || '';
                 this.orderType = d.order_type === 'take' ? 'take' : 'dine';
                 this.cart = (d.items || []).map((row) => {
                     const pid = Number(row.product_id);
@@ -426,9 +436,30 @@ window.StarrichPos = function StarrichPos(payload) {
             }
         },
 
+        validateCashierName() {
+            if (! this.isAdmin) {
+                return true;
+            }
+            if (! this.cashierName.trim()) {
+                Alpine.store('toast').show('Isi nama kasir yang melayani.', 'error');
+                return false;
+            }
+            return true;
+        },
+
+        cashierPayload() {
+            if (! this.isAdmin) {
+                return {};
+            }
+            return { nama_kasir: this.cashierName.trim() };
+        },
+
         async saveOpenBillEdits() {
             if (! this.editingOpenBillId || this.cart.length === 0) {
                 Alpine.store('toast').show('Keranjang kosong.', 'error');
+                return;
+            }
+            if (! this.validateCashierName()) {
                 return;
             }
             if (! this.updateOpenBillUrlTemplate) {
@@ -443,6 +474,7 @@ window.StarrichPos = function StarrichPos(payload) {
                     body: JSON.stringify({
                         order_type: this.orderType,
                         items: this.cartItemsForApi(),
+                        ...this.cashierPayload(),
                     }),
                 });
                 const data = await this.parseJsonResponse(res);
@@ -463,6 +495,7 @@ window.StarrichPos = function StarrichPos(payload) {
             this.editingOpenBillId = null;
             this.cart = [];
             this.openBillName = '';
+            this.cashierName = '';
             this.orderType = 'dine';
             this.payModalOpen = false;
             this.settlingBill = null;
@@ -476,6 +509,9 @@ window.StarrichPos = function StarrichPos(payload) {
             if (! billId || ! this.updateOpenBillUrlTemplate || ! this.payOpenBillUrlTemplate) {
                 return;
             }
+            if (! this.validateCashierName()) {
+                return;
+            }
             this.paying = true;
             try {
                 const updateUrl = this.updateOpenBillUrlTemplate.replace('__ID__', String(billId));
@@ -485,6 +521,7 @@ window.StarrichPos = function StarrichPos(payload) {
                     body: JSON.stringify({
                         order_type: this.orderType,
                         items: this.cartItemsForApi(),
+                        ...this.cashierPayload(),
                     }),
                 });
                 const udata = await this.parseJsonResponse(ures);
@@ -701,6 +738,9 @@ window.StarrichPos = function StarrichPos(payload) {
                 Alpine.store('toast').show('Isi nama pelanggan untuk open bill.', 'error');
                 return;
             }
+            if (! this.validateCashierName()) {
+                return;
+            }
 
             this.paying = true;
             try {
@@ -712,6 +752,7 @@ window.StarrichPos = function StarrichPos(payload) {
                         order_type: this.orderType,
                         nama_pelanggan: nama,
                         items: this.cartItemsForApi(),
+                        ...this.cashierPayload(),
                     }),
                 });
                 const data = await this.parseJsonResponse(res);
@@ -737,6 +778,10 @@ window.StarrichPos = function StarrichPos(payload) {
             const total = this.payModalTotal;
 
             if (! this.validatePaymentSplits(splits, total)) {
+                return;
+            }
+
+            if (! this.validateCashierName()) {
                 return;
             }
 
@@ -766,6 +811,7 @@ window.StarrichPos = function StarrichPos(payload) {
                         order_type: this.orderType,
                         items: this.cartItemsForApi(),
                         payment_splits: splits,
+                        ...this.cashierPayload(),
                     }),
                 });
                 const data = await this.parseJsonResponse(res);

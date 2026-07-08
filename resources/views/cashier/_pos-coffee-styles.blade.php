@@ -500,6 +500,35 @@
         text-decoration: underline;
     }
 
+    .pc-cashier-field {
+        padding: 10px 18px 0;
+        border-top: 1px solid var(--border);
+        background: var(--warm-white);
+    }
+    .pc-cashier-label {
+        display: block;
+        margin-bottom: 6px;
+        font-size: 11px;
+        font-weight: 600;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        color: var(--brown-mid);
+    }
+    .pc-cashier-input {
+        width: 100%;
+        border: 1px solid rgba(15, 23, 42, 0.12);
+        border-radius: 10px;
+        padding: 9px 12px;
+        font-size: 13px;
+        color: var(--espresso);
+        background: #fff;
+    }
+    .pc-cashier-input:focus {
+        outline: none;
+        border-color: var(--blue, #2563eb);
+        box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+    }
+
     .pc-order-summary {
         border-top: 1.5px solid var(--border);
         padding: 10px 18px max(10px, env(safe-area-inset-bottom, 0px));

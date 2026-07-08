@@ -3,6 +3,7 @@
 namespace Database\Seeders;
 
 use App\Models\Asset;
+use App\Models\CapitalInflow;
 use App\Models\Category;
 use App\Models\Expense;
 use App\Models\Product;
@@ -19,6 +20,7 @@ class DatabaseSeeder extends Seeder
         TransactionDetail::query()->delete();
         Transaction::query()->delete();
         Expense::query()->delete();
+        CapitalInflow::query()->delete();
         Asset::query()->delete();
         Product::query()->delete();
         Category::query()->delete();
@@ -80,6 +82,13 @@ class DatabaseSeeder extends Seeder
         ];
         foreach ($expenses as $e) {
             Expense::create($e);
+        }
+
+        $inflows = [
+            ['tanggal' => now()->startOfMonth()->toDateString(), 'kategori' => CapitalInflow::CATEGORY_CARRYOVER, 'nama' => 'Modal sisa bulan lalu', 'jumlah' => 4500000, 'catatan' => 'Saldo kas akhir bulan sebelumnya untuk belanja awal bulan'],
+        ];
+        foreach ($inflows as $i) {
+            CapitalInflow::create($i);
         }
     }
 }

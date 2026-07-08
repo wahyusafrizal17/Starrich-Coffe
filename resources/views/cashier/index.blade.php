@@ -19,6 +19,7 @@
         'invoiceUrlTemplate' => route('cashier.invoice', ['transaction' => '__ID__']),
         'addonsCatalog' => $addonsCatalog,
         'csrf' => csrf_token(),
+        'isAdmin' => auth()->user()->isAdmin(),
     ];
 @endphp
 

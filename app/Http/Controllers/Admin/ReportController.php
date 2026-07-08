@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Asset;
+use App\Models\CapitalInflow;
 use App\Models\Expense;
 use App\Models\Transaction;
 use App\Support\DashboardPeriodResolver;
@@ -96,7 +97,7 @@ class ReportController extends Controller
                         fputcsv($out, [
                             $t->id,
                             $t->created_at->format('Y-m-d H:i:s'),
-                            $t->user?->name,
+                            $t->cashierDisplayName(),
                             $t->paymentMethodLabel(),
                             $t->total,
                             $t->bayar,
@@ -119,9 +120,27 @@ class ReportController extends Controller
         $rangeStart = $period['dari'];
         $rangeEnd = $period['sampai'];
 
-        $revenue = (int) Transaction::paid()
+        $salesRevenue = (int) Transaction::paid()
             ->whereBetween('created_at', [$rangeStart, $rangeEnd])
             ->sum('total');
+
+        $inflowsByCategory = CapitalInflow::query()
+            ->whereBetween('tanggal', [$rangeStart, $rangeEnd])
+            ->selectRaw('kategori, SUM(jumlah) as total')
+            ->groupBy('kategori')
+            ->pluck('total', 'kategori');
+
+        $inflowCategoriesMap = CapitalInflow::categories();
+        $inflowLines = [];
+        foreach ($inflowCategoriesMap as $key => $label) {
+            $inflowLines[$key] = [
+                'label' => $label,
+                'total' => (int) ($inflowsByCategory[$key] ?? 0),
+            ];
+        }
+
+        $totalInflows = array_sum(array_column($inflowLines, 'total'));
+        $totalRevenue = $salesRevenue + $totalInflows;
 
         $expensesByCategory = Expense::query()
             ->whereBetween('tanggal', [$rangeStart, $rangeEnd])
@@ -150,7 +169,7 @@ class ReportController extends Controller
         $totalDepreciation = (int) $depreciationDetails->sum('period');
 
         $operatingCost = $totalExpenses + $totalDepreciation;
-        $netIncome = $revenue - $operatingCost;
+        $netIncome = $totalRevenue - $operatingCost;
         $profitShare30 = (int) round($netIncome * 0.30);
 
         return view('admin.reports.profit-loss', [
@@ -158,7 +177,10 @@ class ReportController extends Controller
             'periodLabel' => $periodLabel,
             'periodTitle' => $periodTitle,
             'filterQuery' => $filterQuery,
-            'revenue' => $revenue,
+            'salesRevenue' => $salesRevenue,
+            'inflowLines' => $inflowLines,
+            'totalInflows' => $totalInflows,
+            'totalRevenue' => $totalRevenue,
             'expenseLines' => $expenseLines,
             'totalExpenses' => $totalExpenses,
             'depreciationDetails' => $depreciationDetails,
@@ -196,7 +218,10 @@ class ReportController extends Controller
 
         if ($filters['filter_kasir'] !== '') {
             $needle = '%'.$filters['filter_kasir'].'%';
-            $query->whereHas('user', fn (Builder $userQuery) => $userQuery->where('name', 'like', $needle));
+            $query->where(function (Builder $q) use ($needle) {
+                $q->where('nama_kasir', 'like', $needle)
+                    ->orWhereHas('user', fn (Builder $userQuery) => $userQuery->where('name', 'like', $needle));
+            });
         }
 
         if ($filters['filter_pembayaran'] !== '') {

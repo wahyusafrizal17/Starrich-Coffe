@@ -62,6 +62,7 @@ class CashierController extends Controller
             $base->where(function ($qq) use ($q) {
                 $qq->where('id', $q)
                     ->orWhere('nama_pelanggan', 'like', '%'.$q.'%')
+                    ->orWhere('nama_kasir', 'like', '%'.$q.'%')
                     ->orWhereHas('user', fn ($u) => $u->where('name', 'like', '%'.$q.'%'));
             });
         }
@@ -106,6 +107,7 @@ class CashierController extends Controller
             $base->where(function ($qq) use ($q) {
                 $qq->where('id', $q)
                     ->orWhere('nama_pelanggan', 'like', '%'.$q.'%')
+                    ->orWhere('nama_kasir', 'like', '%'.$q.'%')
                     ->orWhereHas('user', fn ($u) => $u->where('name', 'like', '%'.$q.'%'));
             });
         }
@@ -201,7 +203,7 @@ class CashierController extends Controller
 
     public function checkout(Request $request): JsonResponse
     {
-        $data = $request->validate([
+        $rules = [
             'action' => ['nullable', 'string', 'in:pay,open_bill'],
             'order_type' => ['nullable', 'string', 'in:dine,take'],
             'nama_pelanggan' => ['required_if:action,open_bill', 'nullable', 'string', 'max:100'],
@@ -214,7 +216,13 @@ class CashierController extends Controller
             'payment_splits' => ['nullable', 'array'],
             'payment_splits.*.metode' => ['required_with:payment_splits', 'string', 'in:qris,transfer,cash'],
             'payment_splits.*.jumlah' => ['required_with:payment_splits', 'integer', 'min:0'],
-        ]);
+        ];
+
+        if ($request->user()->isAdmin()) {
+            $rules['nama_kasir'] = ['required', 'string', 'max:100'];
+        }
+
+        $data = $request->validate($rules);
 
         $action = $data['action'] ?? 'pay';
 
@@ -255,6 +263,7 @@ class CashierController extends Controller
             'data' => [
                 'id' => $transaction->id,
                 'nama_pelanggan' => $transaction->nama_pelanggan,
+                'nama_kasir' => $transaction->nama_kasir,
                 'order_type' => $transaction->order_type ?? 'dine',
                 'items' => $items,
             ],
@@ -270,7 +279,7 @@ class CashierController extends Controller
             ], 422);
         }
 
-        $data = $request->validate([
+        $rules = [
             'order_type' => ['nullable', 'string', 'in:dine,take'],
             'items' => ['required', 'array', 'min:1'],
             'items.*.product_id' => ['required', 'integer', 'exists:products,id'],
@@ -278,18 +287,30 @@ class CashierController extends Controller
             'items.*.suhu' => ['nullable', 'string', 'in:ice,hot'],
             'items.*.addons' => ['nullable', 'array'],
             'items.*.addons.*' => ['string', Rule::in(OrderAddonCatalog::validCodes())],
-        ]);
+        ];
 
-        $result = DB::transaction(function () use ($data, $transaction) {
+        if ($request->user()->isAdmin()) {
+            $rules['nama_kasir'] = ['required', 'string', 'max:100'];
+        }
+
+        $data = $request->validate($rules);
+
+        $result = DB::transaction(function () use ($data, $transaction, $request) {
             [$total, $prepared] = $this->prepareLineItems($data['items']);
 
             $transaction->details()->delete();
             $this->createTransactionDetails($transaction, $prepared);
 
-            $transaction->update([
+            $updates = [
                 'total' => $total,
                 'order_type' => $data['order_type'] ?? $transaction->order_type,
-            ]);
+            ];
+
+            if ($request->user()->isAdmin()) {
+                $updates['nama_kasir'] = trim($data['nama_kasir']);
+            }
+
+            $transaction->update($updates);
 
             return [
                 'transaction_id' => $transaction->id,
@@ -396,6 +417,7 @@ class CashierController extends Controller
                 'status' => Transaction::STATUS_OPEN,
                 'order_type' => $data['order_type'] ?? null,
                 'nama_pelanggan' => trim($data['nama_pelanggan'] ?? ''),
+                'nama_kasir' => $this->resolvedCashierName($request, $data),
                 'user_id' => $request->user()->id,
             ]);
 
@@ -444,6 +466,7 @@ class CashierController extends Controller
                 'payment_splits' => $splits,
                 'status' => Transaction::STATUS_PAID,
                 'order_type' => $data['order_type'] ?? null,
+                'nama_kasir' => $this->resolvedCashierName($request, $data),
                 'user_id' => $request->user()->id,
             ]);
 
@@ -551,6 +574,16 @@ class CashierController extends Controller
         }
 
         return $splits;
+    }
+
+    /** @param  array<string, mixed>  $data */
+    private function resolvedCashierName(Request $request, array $data): ?string
+    {
+        if (! $request->user()->isAdmin()) {
+            return null;
+        }
+
+        return trim((string) ($data['nama_kasir'] ?? ''));
     }
 
     private function openBillsCount(): int

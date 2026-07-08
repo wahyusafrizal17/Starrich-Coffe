@@ -155,7 +155,7 @@
                             <tr>
                                 <td class="font-mono text-xs text-slate-500">#{{ $t->id }}</td>
                                 <td>{{ $t->created_at->format('d M Y H:i') }}</td>
-                                <td class="text-slate-600">{{ $t->user->name ?? '—' }}</td>
+                                <td class="text-slate-600">{{ $t->cashierDisplayName() }}</td>
                                 <td>
                                     <span class="vx-badge {{ $t->paymentMethodBadgeClass() }}">
                                         {{ $t->paymentMethodLabel() }}
@@ -167,7 +167,7 @@
                                         $detailPayload = [
                                             'id' => $t->id,
                                             'waktu' => $t->created_at->format('d M Y H:i'),
-                                            'kasir' => $t->user->name ?? '—',
+                                            'kasir' => $t->cashierDisplayName(),
                                             'pembayaran' => $t->paymentMethodLabel(),
                                             'total' => format_rupiah($t->total),
                                             'bayar' => format_rupiah($t->bayar),
@@ -262,7 +262,7 @@
                                         </p>
                                         <p class="vx-open-bill-item-meta">
                                             {{ $bill->created_at->format('d M Y · H:i') }}
-                                            · Kasir: {{ $bill->user?->name ?? '—' }}
+                                            · Kasir: {{ $bill->cashierDisplayName() }}
                                         </p>
                                         <p class="vx-open-bill-item-meta">
                                             {{ $itemsCount }} item

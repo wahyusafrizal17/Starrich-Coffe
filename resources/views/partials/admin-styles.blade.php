@@ -430,9 +430,11 @@
     @media (min-width: 640px) {
         .vx-hero-stats { grid-template-columns: repeat(4, minmax(0, 1fr)); }
         .vx-hero-stats.is-cols-5 { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+        .vx-hero-stats.is-cols-6 { grid-template-columns: repeat(6, minmax(0, 1fr)); }
     }
-    .vx-hero-stats.is-cols-5 .vx-hero-stat strong {
-        font-size: clamp(14px, 1.35vw, 18px);
+    .vx-hero-stats.is-cols-5 .vx-hero-stat strong,
+    .vx-hero-stats.is-cols-6 .vx-hero-stat strong {
+        font-size: clamp(13px, 1.2vw, 17px);
     }
     .vx-hero-stat label {
         display: block;

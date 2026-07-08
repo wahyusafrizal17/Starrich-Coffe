@@ -65,6 +65,10 @@
                     <svg viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 8.25h19.5M2.25 9h19.5m-16.5 5.25h6m-6 2.25h3M3.75 6.75h16.5a1.5 1.5 0 0 1 1.5 1.5v9a1.5 1.5 0 0 1-1.5 1.5H3.75a1.5 1.5 0 0 1-1.5-1.5v-9a1.5 1.5 0 0 1 1.5-1.5Z"/></svg>
                     Pengeluaran
                 </a>
+                <a href="{{ route('admin.inflows.index') }}" class="vx-sidebar-link {{ request()->routeIs('admin.inflows.*') ? 'is-active' : '' }}">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v12m6-6H6M2.25 18.75a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18.75V7.5a2.25 2.25 0 0 0-2.25-2.25h-5.379a1.53 1.53 0 0 1-1.09-.45L12 3m0 0 2.121-2.121a1.53 1.53 0 0 1 1.09-.45H18.75A2.25 2.25 0 0 1 21 4.5v14.25a2.25 2.25 0 0 1-2.25 2.25H5.25A2.25 2.25 0 0 1 3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h.379a1.53 1.53 0 0 1 1.09.45L9 6m3-3v3"/></svg>
+                    Pemasukan / Modal
+                </a>
                 <a href="{{ route('admin.assets.index') }}" class="vx-sidebar-link {{ request()->routeIs('admin.assets.*') ? 'is-active' : '' }}">
                     <svg viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M6 12 3.269 3.125A59.769 59.769 0 0 1 21.485 12 59.768 59.768 0 0 1 3.27 20.875L5.999 12Zm0 0h7.5"/></svg>
                     Aset & Peralatan

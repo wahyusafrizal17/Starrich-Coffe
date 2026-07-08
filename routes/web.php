@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Admin\AssetController;
+use App\Http\Controllers\Admin\CapitalInflowController;
 use App\Http\Controllers\Admin\CategoryController;
 use App\Http\Controllers\Admin\ExpenseController;
 use App\Http\Controllers\Admin\OrderAddonController;
@@ -44,6 +45,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::resource('pengeluaran', ExpenseController::class)
             ->parameters(['pengeluaran' => 'expense'])
             ->names('expenses')
+            ->except(['show', 'create', 'edit']);
+        Route::resource('pemasukan', CapitalInflowController::class)
+            ->parameters(['pemasukan' => 'inflow'])
+            ->names('inflows')
             ->except(['show', 'create', 'edit']);
         Route::resource('aset', AssetController::class)
             ->parameters(['aset' => 'asset'])

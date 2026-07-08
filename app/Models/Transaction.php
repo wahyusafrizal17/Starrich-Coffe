@@ -23,6 +23,7 @@ class Transaction extends Model
         'status',
         'order_type',
         'nama_pelanggan',
+        'nama_kasir',
     ];
 
     protected function casts(): array
@@ -108,6 +109,16 @@ class Transaction extends Model
             'split' => 'vx-badge-primary',
             default => 'vx-badge-slate',
         };
+    }
+
+    public function cashierDisplayName(): string
+    {
+        $manual = trim((string) ($this->nama_kasir ?? ''));
+        if ($manual !== '') {
+            return $manual;
+        }
+
+        return $this->user?->name ?? '—';
     }
 
     /** @return array<string, mixed> */
