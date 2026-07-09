@@ -20,6 +20,7 @@
         'addonsCatalog' => $addonsCatalog,
         'csrf' => csrf_token(),
         'isAdmin' => auth()->user()->isAdmin(),
+        'userName' => auth()->user()->name,
     ];
 @endphp
 
@@ -27,133 +28,96 @@
     @include('cashier._pos-coffee-styles')
 
     <div
-        class="pos-coffee flex min-h-0 flex-1 flex-col overflow-hidden"
+        class="pos-kasir flex min-h-0 flex-1 flex-col"
         x-data="StarrichPos({{ \Illuminate\Support\Js::from($posPayload) }})"
-        x-on:keydown.escape.window="if (addonModalOpen) { closeAddonModal(); } else if (varianModalOpen) { closeVarianModal(); } else if (payModalOpen) { closePaymentModal(); } else { cartOpen = false }"
+        x-on:keydown.escape.window="if (addonModalOpen) { closeAddonModal(); } else if (varianModalOpen) { closeVarianModal(); } else if (payModalOpen) { closePaymentModal(); }"
     >
-        @include('cashier._cashier-header', ['openBillsCount' => $openBillsCount])
-
-        <div class="pc-main min-h-0 flex-1">
-            <div class="pc-left">
+        <div class="sr-app">
+            <div class="menu-side">
                 <div
-                    class="pc-edit-open-bill-banner"
+                    class="sr-edit-banner"
                     x-show="editingOpenBillId"
                     x-cloak
                     role="status"
                 >
-                    <div class="pc-edit-open-bill-text">
+                    <div>
                         <strong>Mengedit open bill</strong>
                         <span x-text="'#' + String(editingOpenBillId).padStart(5, '0') + (openBillName ? ' / ' + openBillName : '')"></span>
                     </div>
-                    <div class="pc-edit-open-bill-actions">
-                        <button type="button" class="pc-edit-open-bill-save" x-on:click="saveOpenBillEdits()" :disabled="paying || cart.length === 0">
-                            Simpan perubahan
+                    <div class="sr-edit-actions">
+                        <button type="button" class="is-primary" x-on:click="saveOpenBillEdits()" :disabled="paying || cart.length === 0">
+                            Simpan
                         </button>
-                        <button type="button" class="pc-edit-open-bill-cancel" x-on:click="cancelOpenBillEdit()" :disabled="paying">
+                        <button type="button" x-on:click="cancelOpenBillEdit()" :disabled="paying">
                             Batal
                         </button>
                     </div>
                 </div>
 
-                <div class="pc-categories">
-                    <button
-                        type="button"
-                        class="pc-cat-btn"
-                        :class="{ active: categoryId === '' }"
-                        x-on:click="categoryId = ''"
-                    >
-                        Semua
-                    </button>
-                    <template x-for="c in categories" :key="c.id">
-                        <button
-                            type="button"
-                            class="pc-cat-btn"
-                            :class="{ active: String(categoryId) === String(c.id) }"
-                            x-on:click="categoryId = String(c.id)"
-                            x-text="c.nama_kategori"
-                        ></button>
-                    </template>
+                <div class="controls">
+                    <div class="search-wrap">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                            <circle cx="11" cy="11" r="7"/>
+                            <path d="m21 21-4.3-4.3"/>
+                        </svg>
+                        <input
+                            type="search"
+                            x-model="search"
+                            placeholder="Cari menu..."
+                            autocomplete="off"
+                        />
+                    </div>
+                    @include('cashier._category-dock')
                 </div>
 
-                <div class="pc-search-wrap">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <circle cx="11" cy="11" r="8" />
-                        <path d="m21 21-4.35-4.35" />
-                    </svg>
-                    <input
-                        type="search"
-                        class="pc-search-input"
-                        x-model="search"
-                        placeholder="Cari menu…"
-                        autocomplete="off"
-                    />
-                </div>
-
-                <div class="pc-menu-grid">
+                <div class="menu-grid">
                     <template x-for="p in filteredProducts" :key="p.id">
-                        <button
-                            type="button"
-                            class="pc-menu-card"
-                            x-on:click="addProduct(p)"
-                        >
-                            <div class="pc-card-thumb">
-                                <img x-show="p.gambar" x-cloak :src="p.gambar" :alt="p.nama_produk" loading="lazy" />
-                                <span class="pc-card-emoji" x-show="!p.gambar" x-text="emojiIcon(p)" x-cloak></span>
+                        <button type="button" class="item-card" x-on:click="addProduct(p)">
+                            <div class="item-media">
+                                <div
+                                    class="qty-badge"
+                                    :class="{ show: productCartQty(p.id) > 0 }"
+                                    x-text="productCartQty(p.id)"
+                                    x-show="productCartQty(p.id) > 0"
+                                    x-cloak
+                                ></div>
+                                <div class="item-icon" :class="{ 'is-fallback': !productShowsImage(p) }">
+                                    <img
+                                        x-show="productShowsImage(p)"
+                                        x-cloak
+                                        :src="p.gambar"
+                                        alt=""
+                                        loading="lazy"
+                                        x-on:error="onProductImageError(p.id)"
+                                    />
+                                    <span class="item-emoji" x-show="!productShowsImage(p)" x-text="emojiIcon(p)" x-cloak></span>
+                                </div>
                             </div>
-                            <div class="pc-card-name" x-text="p.nama_produk"></div>
-                            <div class="pc-card-footer">
-                                <span class="pc-card-price" x-text="formatRp(p.harga)"></span>
-                                <span class="pc-card-tag" x-show="categoryShort(p)" x-text="categoryShort(p)" x-cloak></span>
+                            <div class="item-body">
+                                <div class="item-name" x-text="p.nama_produk"></div>
+                                <div class="item-meta">
+                                    <span class="item-price" x-text="formatRp(p.harga)"></span>
+                                </div>
                             </div>
                         </button>
                     </template>
+                    <div class="empty-results" x-show="filteredProducts.length === 0" x-cloak>
+                        Menu tidak ditemukan.
+                    </div>
                 </div>
-                <p
-                    class="py-12 text-center text-sm"
-                    style="color: var(--brown-light, #64748b)"
-                    x-show="filteredProducts.length === 0"
-                    x-cloak
-                >
-                    Tidak ada produk yang cocok.
-                </p>
             </div>
 
-            <aside class="pc-right pc-right-sidebar hidden lg:flex" aria-label="Keranjang">
-                @include('cashier._cart-panel', ['mobile' => false])
-            </aside>
+            @include('cashier._cart-panel')
         </div>
+
+        @include('cashier._cashier-bottom-nav', [
+            'active' => 'kasir',
+            'openBillsCount' => $openBillsCount,
+            'alpine' => true,
+        ])
 
         @include('cashier._pay-modal')
         @include('cashier._varian-suhu-modal')
         @include('cashier._addon-modal')
-
-        {{-- Drawer mobile --}}
-        <div class="fixed inset-0 z-50 lg:hidden" x-show="cartOpen" x-transition.opacity.duration.200ms x-cloak>
-            <div class="absolute inset-0 bg-stone-900/50 backdrop-blur-sm" x-on:click="cartOpen = false"></div>
-            <div
-                class="absolute inset-y-0 right-0 flex w-full max-w-md flex-col border-l shadow-2xl"
-                style="background: var(--warm-white, #f8fafc); border-color: rgba(15, 23, 42, 0.1)"
-                x-show="cartOpen"
-                x-transition:enter="transition duration-200 ease-out"
-                x-transition:enter-start="translate-x-full"
-                x-transition:enter-end="translate-x-0"
-                x-transition:leave="transition duration-150 ease-in"
-                x-transition:leave-start="translate-x-0"
-                x-transition:leave-end="translate-x-full"
-            >
-                <div class="relative flex min-h-0 flex-1 flex-col overflow-hidden pt-12">
-                    <button
-                        type="button"
-                        class="absolute right-4 top-3 z-10 flex h-10 w-10 items-center justify-center rounded-full border text-xl font-medium"
-                        style="border-color: rgba(15, 23, 42, 0.12); color: var(--brown-mid, #334155); background: var(--cream, #eff6ff)"
-                        aria-label="Tutup"
-                        x-on:click="cartOpen = false"
-                    >
-                        ×
-                    </button>
-                    @include('cashier._cart-panel', ['mobile' => true])
-                </div>
-            </div>
-        </div>
     </div>
 @endsection

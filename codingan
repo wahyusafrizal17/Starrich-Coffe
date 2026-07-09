@@ -1,0 +1,875 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kasir — Starrich</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --primary:#1E40AF;
+    --primary-strong:#152E82;
+    --primary-soft:#EEF2FC;
+    --primary-soft-2:#E1E9FA;
+
+    --white:#FFFFFF;
+    --surface:#F7F8FB;
+    --surface-2:#F1F3F8;
+
+    --ink:#111827;
+    --ink-soft:#5B6472;
+    --ink-faint:#98A1AF;
+    --line:#E7EAF0;
+
+    --success:#1E8A5B;
+    --radius-lg:20px;
+    --radius-md:13px;
+    --radius-sm:9px;
+
+    --nav-h:74px;
+  }
+
+  *{box-sizing:border-box; margin:0; padding:0;}
+
+  body{
+    background:var(--white);
+    color:var(--ink);
+    font-family:'Inter', sans-serif;
+    min-height:100vh;
+  }
+
+  ::selection{ background:var(--primary-soft-2); color:var(--primary-strong); }
+
+  /* ---------- App shell ---------- */
+  .app{
+    display:grid;
+    grid-template-columns: 1fr 400px;
+    min-height:100vh;
+  }
+
+  /* ---------- Left: menu side ---------- */
+  .menu-side{
+    padding:34px 40px 118px;
+    border-right:1px solid var(--line);
+  }
+
+  .brand-row{
+    display:flex;
+    align-items:baseline;
+    justify-content:space-between;
+    margin-bottom:28px;
+  }
+
+  .brand{
+    display:flex;
+    align-items:center;
+    gap:13px;
+  }
+
+  .brand-mark{
+    width:40px; height:40px;
+    border-radius:11px;
+    background:linear-gradient(155deg, var(--primary), var(--primary-strong));
+    display:flex; align-items:center; justify-content:center;
+    font-family:'Fraunces', serif;
+    font-weight:600;
+    color:var(--white);
+    font-size:18px;
+    flex-shrink:0;
+    box-shadow:0 6px 16px -4px rgba(30,64,175,0.4);
+  }
+
+  .brand-text h1{
+    font-family:'Fraunces', serif;
+    font-weight:600;
+    font-size:22px;
+    letter-spacing:0.01em;
+    color:var(--ink);
+  }
+  .brand-text span{
+    display:block;
+    font-size:11px;
+    letter-spacing:0.13em;
+    text-transform:uppercase;
+    color:var(--ink-faint);
+    margin-top:2px;
+  }
+
+  .shift-info{
+    text-align:right;
+    font-family:'IBM Plex Mono', monospace;
+    font-size:12px;
+    color:var(--ink-faint);
+    line-height:1.6;
+  }
+  .shift-info b{ color:var(--primary); font-weight:500; }
+
+  /* Search + filters */
+  .controls{
+    display:flex;
+    gap:14px;
+    margin-bottom:26px;
+    flex-wrap:wrap;
+  }
+
+  .search-wrap{
+    flex:1;
+    min-width:220px;
+    position:relative;
+  }
+  .search-wrap svg{
+    position:absolute;
+    left:16px; top:50%;
+    transform:translateY(-50%);
+    color:var(--ink-faint);
+  }
+  .search-wrap input{
+    width:100%;
+    background:var(--surface);
+    border:1px solid var(--line);
+    border-radius:999px;
+    padding:13px 18px 13px 44px;
+    color:var(--ink);
+    font-family:'Inter', sans-serif;
+    font-size:14px;
+    outline:none;
+    transition:border-color .18s ease, background .18s ease;
+  }
+  .search-wrap input::placeholder{ color:var(--ink-faint); }
+  .search-wrap input:focus{
+    border-color:var(--primary);
+    background:var(--white);
+  }
+
+  .filter-pills{
+    display:flex;
+    gap:8px;
+  }
+  .pill{
+    background:var(--white);
+    border:1px solid var(--line);
+    color:var(--ink-soft);
+    padding:11px 20px;
+    border-radius:999px;
+    font-size:13px;
+    font-weight:500;
+    cursor:pointer;
+    white-space:nowrap;
+    transition:all .16s ease;
+    font-family:'Inter', sans-serif;
+  }
+  .pill:hover{ border-color:var(--primary); color:var(--primary); }
+  .pill.active{
+    background:var(--primary);
+    border-color:var(--primary);
+    color:var(--white);
+    font-weight:600;
+    box-shadow:0 4px 12px -3px rgba(30,64,175,0.35);
+  }
+
+  /* Menu grid */
+  .menu-grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fill, minmax(168px, 1fr));
+    gap:14px;
+  }
+
+  .item-card{
+    background:var(--white);
+    border:1px solid var(--line);
+    border-radius:var(--radius-md);
+    padding:16px;
+    cursor:pointer;
+    transition:transform .14s ease, border-color .14s ease, box-shadow .14s ease;
+    position:relative;
+    overflow:hidden;
+  }
+  .item-card:hover{
+    border-color:var(--primary);
+    transform:translateY(-3px);
+    box-shadow:0 12px 24px -12px rgba(30,64,175,0.28);
+  }
+  .item-card:active{ transform:translateY(-1px); }
+
+  .item-icon{
+    width:44px; height:44px;
+    border-radius:12px;
+    background:var(--primary-soft);
+    display:flex; align-items:center; justify-content:center;
+    margin-bottom:14px;
+    color:var(--primary);
+  }
+  .item-icon svg{ width:20px; height:20px; }
+
+  .item-name{
+    font-size:14.5px;
+    font-weight:600;
+    color:var(--ink);
+    margin-bottom:6px;
+    text-transform:capitalize;
+    line-height:1.3;
+  }
+
+  .item-meta{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    margin-top:10px;
+  }
+  .item-price{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:12.5px;
+    color:var(--primary);
+    font-weight:600;
+  }
+  .item-tag{
+    font-size:9.5px;
+    letter-spacing:0.08em;
+    text-transform:uppercase;
+    color:var(--ink-faint);
+    border:1px solid var(--line);
+    padding:3px 7px;
+    border-radius:5px;
+  }
+
+  .qty-badge{
+    position:absolute;
+    top:12px; right:12px;
+    background:var(--primary);
+    color:var(--white);
+    font-family:'IBM Plex Mono', monospace;
+    font-size:11px;
+    font-weight:600;
+    width:22px; height:22px;
+    border-radius:50%;
+    display:flex; align-items:center; justify-content:center;
+    opacity:0;
+    transform:scale(0.6);
+    transition:all .16s ease;
+  }
+  .qty-badge.show{ opacity:1; transform:scale(1); }
+
+  .empty-results{
+    grid-column:1/-1;
+    text-align:center;
+    padding:60px 20px;
+    color:var(--ink-faint);
+    font-size:14px;
+  }
+
+  /* ---------- Right: receipt / order panel ---------- */
+  .order-side{
+    background:var(--surface);
+    display:flex;
+    flex-direction:column;
+    height:100vh;
+    position:sticky;
+    top:0;
+    border-left:1px solid var(--line);
+  }
+
+  .order-header{
+    padding:28px 30px 0;
+  }
+  .order-title-row{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    margin-bottom:18px;
+  }
+  .order-title{
+    font-family:'Fraunces', serif;
+    font-size:20px;
+    font-weight:600;
+    color:var(--ink);
+  }
+  .mode-toggle{
+    display:flex;
+    background:var(--white);
+    border:1px solid var(--line);
+    border-radius:999px;
+    padding:3px;
+  }
+  .mode-toggle button{
+    background:transparent;
+    border:none;
+    color:var(--ink-soft);
+    font-family:'Inter', sans-serif;
+    font-size:12px;
+    font-weight:600;
+    padding:8px 14px;
+    border-radius:999px;
+    cursor:pointer;
+    transition:all .16s ease;
+  }
+  .mode-toggle button.active{
+    background:var(--primary);
+    color:var(--white);
+  }
+
+  /* Receipt paper */
+  .receipt{
+    flex:1;
+    overflow-y:auto;
+    margin:0 30px;
+    position:relative;
+  }
+  .receipt::before{
+    content:"";
+    display:block;
+    height:14px;
+    background:
+      radial-gradient(circle at 8px 0, transparent 6px, var(--surface) 6.5px) 0 0/16px 14px repeat-x;
+  }
+  .receipt-inner{
+    background:var(--white);
+    border:1px solid var(--line);
+    border-top:none;
+    border-radius:0 0 var(--radius-sm) var(--radius-sm);
+    padding:4px 18px 6px;
+  }
+
+  .order-empty{
+    text-align:center;
+    padding:70px 10px;
+  }
+  .order-empty svg{ opacity:0.3; margin-bottom:16px; color:var(--ink-faint); }
+  .order-empty p{ color:var(--ink-soft); font-size:14px; font-weight:500; }
+  .order-empty span{ color:var(--ink-faint); font-size:12.5px; display:block; margin-top:4px; }
+
+  .cart-line{
+    display:flex;
+    align-items:center;
+    gap:12px;
+    padding:14px 0;
+    border-bottom:1px dashed var(--line);
+  }
+  .cart-line:last-child{ border-bottom:none; }
+  .cart-line-name{
+    flex:1;
+    font-size:13.5px;
+    font-weight:500;
+    text-transform:capitalize;
+    color:var(--ink);
+  }
+  .cart-line-sub{
+    display:block;
+    font-family:'IBM Plex Mono', monospace;
+    font-size:11px;
+    color:var(--ink-faint);
+    margin-top:2px;
+  }
+  .stepper{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    background:var(--surface);
+    border:1px solid var(--line);
+    border-radius:999px;
+    padding:4px 6px;
+  }
+  .stepper button{
+    width:20px; height:20px;
+    border-radius:50%;
+    border:none;
+    background:transparent;
+    color:var(--primary);
+    font-size:15px;
+    line-height:1;
+    cursor:pointer;
+    display:flex; align-items:center; justify-content:center;
+  }
+  .stepper button:hover{ background:var(--primary-soft-2); }
+  .stepper span{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:12.5px;
+    min-width:14px;
+    text-align:center;
+  }
+  .cart-line-price{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:13px;
+    color:var(--primary);
+    font-weight:600;
+    min-width:76px;
+    text-align:right;
+  }
+
+  /* Summary + footer */
+  .order-footer{
+    padding:18px 30px 24px;
+  }
+  .summary-row{
+    display:flex;
+    justify-content:space-between;
+    font-family:'IBM Plex Mono', monospace;
+    font-size:12.5px;
+    color:var(--ink-soft);
+    margin-bottom:8px;
+  }
+  .summary-row.total{
+    margin-top:14px;
+    padding-top:14px;
+    border-top:1px solid var(--line);
+    font-size:20px;
+    color:var(--ink);
+    font-weight:600;
+    align-items:center;
+  }
+  .summary-row.total .label{
+    font-family:'Fraunces', serif;
+    font-size:15px;
+    font-weight:500;
+    color:var(--ink-soft);
+  }
+  .summary-row.total .value{ color:var(--primary); }
+
+  .cashier-field{ margin:18px 0 20px; }
+  .cashier-field label{
+    font-size:10.5px;
+    letter-spacing:0.1em;
+    text-transform:uppercase;
+    color:var(--ink-faint);
+    display:block;
+    margin-bottom:8px;
+  }
+  .cashier-field input{
+    width:100%;
+    background:var(--white);
+    border:1px solid var(--line);
+    border-radius:var(--radius-sm);
+    padding:11px 14px;
+    color:var(--ink);
+    font-family:'Inter', sans-serif;
+    font-size:13.5px;
+    outline:none;
+  }
+  .cashier-field input:focus{ border-color:var(--primary); }
+
+  .pay-btn{
+    width:100%;
+    background:linear-gradient(180deg, var(--primary), var(--primary-strong));
+    border:none;
+    border-radius:var(--radius-sm);
+    padding:16px;
+    color:var(--white);
+    font-family:'Inter', sans-serif;
+    font-size:14.5px;
+    font-weight:700;
+    letter-spacing:0.01em;
+    cursor:pointer;
+    transition:filter .15s ease, transform .1s ease, box-shadow .15s ease;
+    display:flex; align-items:center; justify-content:center; gap:8px;
+    box-shadow:0 10px 22px -8px rgba(30,64,175,0.45);
+  }
+  .pay-btn:hover:not(:disabled){ filter:brightness(1.06); }
+  .pay-btn:active:not(:disabled){ transform:scale(0.99); }
+  .pay-btn:disabled{
+    background:var(--surface-2);
+    color:var(--ink-faint);
+    cursor:not-allowed;
+    box-shadow:none;
+  }
+
+  .toast{
+    position:fixed;
+    bottom:28px; left:50%;
+    transform:translateX(-50%) translateY(20px);
+    background:var(--success);
+    color:var(--white);
+    padding:14px 24px;
+    border-radius:999px;
+    font-size:13.5px;
+    font-weight:600;
+    opacity:0;
+    pointer-events:none;
+    transition:all .25s ease;
+    z-index:60;
+    box-shadow:0 12px 26px -8px rgba(30,138,91,0.5);
+  }
+  .toast.show{ opacity:1; transform:translateX(-50%) translateY(0); }
+
+  .receipt::-webkit-scrollbar{ width:6px; }
+  .receipt::-webkit-scrollbar-thumb{ background:var(--line); border-radius:6px; }
+
+  /* ---------- Bottom nav (floating dock) ---------- */
+  .bottom-nav{
+    position:fixed;
+    left:0;
+    width:calc(100% - 400px);
+    bottom:22px;
+    display:flex;
+    justify-content:center;
+    z-index:40;
+    pointer-events:none;
+  }
+  .nav-dock{
+    pointer-events:auto;
+    display:flex;
+    align-items:center;
+    gap:34px;
+    background:rgba(255,255,255,0.86);
+    -webkit-backdrop-filter:blur(14px);
+    backdrop-filter:blur(14px);
+    border:1px solid var(--line);
+    border-radius:999px;
+    padding:10px 26px;
+    box-shadow:0 18px 40px -16px rgba(17,24,39,0.22);
+  }
+  .nav-item{
+    background:none;
+    border:none;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:3px;
+    color:var(--ink-faint);
+    cursor:pointer;
+    font-family:'Inter', sans-serif;
+    font-size:10.5px;
+    font-weight:600;
+    position:relative;
+    padding:4px 2px;
+    transition:color .15s ease;
+  }
+  .nav-item svg{ width:21px; height:21px; }
+  .nav-item:hover{ color:var(--primary); }
+  .nav-item.active{ color:var(--primary); }
+
+  .nav-badge{
+    position:absolute;
+    top:-4px; right:-10px;
+    background:var(--primary);
+    color:var(--white);
+    font-size:9.5px;
+    font-weight:700;
+    min-width:16px; height:16px;
+    border-radius:8px;
+    display:flex; align-items:center; justify-content:center;
+    padding:0 3px;
+  }
+
+  .nav-item.center{
+    width:48px; height:48px;
+    border-radius:50%;
+    background:linear-gradient(155deg, var(--primary), var(--primary-strong));
+    color:var(--white);
+    margin-top:-26px;
+    box-shadow:0 10px 22px -6px rgba(30,64,175,0.55);
+    justify-content:center;
+    border:3px solid var(--white);
+  }
+  .nav-item.center svg{ width:22px; height:22px; }
+  .nav-item.center span{ display:none; }
+
+  @media (max-width: 980px){
+    .app{ grid-template-columns:1fr; }
+    .order-side{ height:auto; position:relative; }
+    .menu-side{ padding:24px 24px 118px; border-right:none; }
+    .bottom-nav{ width:100%; }
+    .nav-dock{ gap:24px; padding:10px 18px; }
+  }
+
+  :focus-visible{ outline:2px solid var(--primary); outline-offset:2px; }
+</style>
+</head>
+<body>
+
+<div class="app">
+
+  <!-- MENU SIDE -->
+  <div class="menu-side">
+    <div class="brand-row">
+      <div class="brand">
+        <div class="brand-mark">S</div>
+        <div class="brand-text">
+          <h1>Starrich</h1>
+          <span>Kasir · Coffee &amp; Kitchen</span>
+        </div>
+      </div>
+      <div class="shift-info">
+        Kamis, 9 Jul &nbsp;·&nbsp; 09:59<br>
+        Kasir: <b id="cashierEcho">—</b>
+      </div>
+    </div>
+
+    <div class="controls">
+      <div class="search-wrap">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+        <input id="searchInput" type="text" placeholder="Cari menu...">
+      </div>
+      <div class="filter-pills" id="filterPills">
+        <button class="pill active" data-cat="Semua">Semua</button>
+        <button class="pill" data-cat="Makanan">Makanan</button>
+        <button class="pill" data-cat="Minuman">Minuman</button>
+        <button class="pill" data-cat="Snack">Snack</button>
+      </div>
+    </div>
+
+    <div class="menu-grid" id="menuGrid"></div>
+  </div>
+
+  <!-- ORDER SIDE -->
+  <div class="order-side">
+    <div class="order-header">
+      <div class="order-title-row">
+        <div class="order-title">Pesanan</div>
+        <div class="mode-toggle" id="modeToggle">
+          <button class="active" data-mode="Dine In">Dine In</button>
+          <button data-mode="Take Away">Take Away</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="receipt">
+      <div class="receipt-inner" id="cartList"></div>
+    </div>
+
+    <div class="order-footer">
+      <div class="summary-row"><span>Subtotal</span><span id="subtotalVal">Rp 0</span></div>
+      <div class="summary-row"><span>Pajak (10%)</span><span id="taxVal">Rp 0</span></div>
+      <div class="summary-row total"><span class="label">Total</span><span class="value" id="totalVal">Rp 0</span></div>
+
+      <div class="cashier-field">
+        <label for="cashierInput">Kasir yang melayani</label>
+        <input id="cashierInput" type="text" placeholder="Ketik nama kasir...">
+      </div>
+
+      <button class="pay-btn" id="payBtn" disabled>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg>
+        Proses Pembayaran
+      </button>
+    </div>
+  </div>
+
+</div>
+
+<!-- BOTTOM NAV -->
+<nav class="bottom-nav">
+  <div class="nav-dock">
+    <button class="nav-item active" data-nav="kasir">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 11.5 12 4l9 7.5"/><path d="M5 10v9a1 1 0 0 0 1 1h4v-6h4v6h4a1 1 0 0 0 1-1v-9"/></svg>
+      <span>Kasir</span>
+    </button>
+    <button class="nav-item" data-nav="riwayat">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></svg>
+      <span>Riwayat</span>
+    </button>
+    <button class="nav-item center" data-nav="cart">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 8h14l-1.2 10.2A2 2 0 0 1 14.8 20H7.2a2 2 0 0 1-2-1.8L4 8Z"/><path d="M18 8a3 3 0 0 0 0-6"/></svg>
+      <span>Kasir</span>
+    </button>
+    <button class="nav-item" data-nav="bill">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 3h9l4 4v14a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1Z"/><path d="M9 9h6M9 13h6M9 17h3"/></svg>
+      <span class="nav-badge" id="billBadge">26</span>
+      <span>Open Bill</span>
+    </button>
+    <button class="nav-item" data-nav="admin">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="3.5"/><path d="M5 20c0-3.9 3.1-6.5 7-6.5s7 2.6 7 6.5"/></svg>
+      <span>Admin</span>
+    </button>
+  </div>
+</nav>
+
+<div class="toast" id="toast">Pembayaran berhasil diproses ✓</div>
+
+<script>
+  // ---------- Icons ----------
+  const icons = {
+    Minuman: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 8h14l-1.2 10.2A2 2 0 0 1 14.8 20H7.2a2 2 0 0 1-2-1.8L4 8Z"/><path d="M18 8a3 3 0 0 0 0-6"/><path d="M8 4c0 1 1 1 1 2s-1 1-1 2"/><path d="M12 4c0 1 1 1 1 2s-1 1-1 2"/></svg>',
+    Makanan: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="8.5"/><path d="M12 3.5v3M12 17.5v3"/></svg>',
+    Snack: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 10c0-3.5 3.5-6.5 8-6.5s8 3 8 6.5-3.5 10.5-8 10.5S4 13.5 4 10Z"/><path d="M9 10h.01M15 10h.01M9.5 14.5c1 1 4 1 5 0"/></svg>'
+  };
+
+  // ---------- Menu data (from existing kasir) ----------
+  const menu = [
+    { name:"Amerikano", price:19000, cat:"Minuman" },
+    { name:"Butterscoth", price:24000, cat:"Minuman" },
+    { name:"Cappucino", price:20000, cat:"Minuman" },
+    { name:"Chocomilky", price:21000, cat:"Minuman" },
+    { name:"Cireng bumbu rujak", price:18000, cat:"Makanan" },
+    { name:"Dimsum ayam", price:22000, cat:"Makanan" },
+    { name:"Espresso", price:10000, cat:"Minuman" },
+    { name:"Every berry's", price:21000, cat:"Minuman" },
+    { name:"Kentang goreng", price:17000, cat:"Makanan" },
+    { name:"Kopi rempah", price:23000, cat:"Minuman" },
+    { name:"Kopi susu aren", price:20000, cat:"Minuman" },
+    { name:"Latte", price:20000, cat:"Minuman" },
+    { name:"Lemon is back", price:22000, cat:"Minuman" },
+    { name:"Lemon tea", price:15000, cat:"Minuman" },
+    { name:"Matchalatte", price:22000, cat:"Minuman" },
+    { name:"Mix platter", price:24000, cat:"Makanan" },
+    { name:"Roti bakar", price:19000, cat:"Makanan" },
+    { name:"Sanger", price:18000, cat:"Minuman" },
+    { name:"Starcreamy", price:22000, cat:"Minuman" },
+  ].map((m,i)=>({ id:i, ...m }));
+
+  let activeCat = "Semua";
+  let searchTerm = "";
+  let mode = "Dine In";
+  const cart = {}; // id -> qty
+
+  const fmt = n => "Rp " + n.toLocaleString("id-ID");
+
+  // ---------- Render menu grid ----------
+  function renderMenu(){
+    const grid = document.getElementById('menuGrid');
+    const filtered = menu.filter(m=>{
+      const matchesCat = activeCat === "Semua" || m.cat === activeCat;
+      const matchesSearch = m.name.toLowerCase().includes(searchTerm.toLowerCase());
+      return matchesCat && matchesSearch;
+    });
+
+    if(filtered.length === 0){
+      grid.innerHTML = `<div class="empty-results">Menu tidak ditemukan.</div>`;
+      return;
+    }
+
+    grid.innerHTML = filtered.map(m=>{
+      const qty = cart[m.id] || 0;
+      return `
+        <div class="item-card" data-id="${m.id}">
+          <div class="qty-badge ${qty>0?'show':''}">${qty}</div>
+          <div class="item-icon">${icons[m.cat]}</div>
+          <div class="item-name">${m.name}</div>
+          <div class="item-meta">
+            <span class="item-price">${fmt(m.price)}</span>
+            <span class="item-tag">${m.cat}</span>
+          </div>
+        </div>`;
+    }).join('');
+
+    grid.querySelectorAll('.item-card').forEach(card=>{
+      card.addEventListener('click', ()=>{
+        const id = Number(card.dataset.id);
+        cart[id] = (cart[id]||0) + 1;
+        renderAll();
+      });
+    });
+  }
+
+  // ---------- Render cart / receipt ----------
+  function renderCart(){
+    const list = document.getElementById('cartList');
+    const ids = Object.keys(cart).filter(id=>cart[id] > 0);
+
+    if(ids.length === 0){
+      list.innerHTML = `
+        <div class="order-empty">
+          <svg width="52" height="52" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M4 8h14l-1.2 10.2A2 2 0 0 1 14.8 20H7.2a2 2 0 0 1-2-1.8L4 8Z"/><path d="M18 8a3 3 0 0 0 0-6"/></svg>
+          <p>Belum ada pesanan</p>
+          <span>Pilih menu untuk menambahkan</span>
+        </div>`;
+      return;
+    }
+
+    list.innerHTML = ids.map(id=>{
+      const item = menu.find(m=>m.id === Number(id));
+      const qty = cart[id];
+      return `
+        <div class="cart-line" data-id="${id}">
+          <div class="cart-line-name">${item.name}
+            <span class="cart-line-sub">${fmt(item.price)} × ${qty}</span>
+          </div>
+          <div class="stepper">
+            <button data-action="dec">−</button>
+            <span>${qty}</span>
+            <button data-action="inc">+</button>
+          </div>
+          <div class="cart-line-price">${fmt(item.price * qty)}</div>
+        </div>`;
+    }).join('');
+
+    list.querySelectorAll('.cart-line').forEach(line=>{
+      const id = line.dataset.id;
+      line.querySelector('[data-action="inc"]').addEventListener('click', e=>{
+        e.stopPropagation();
+        cart[id]++;
+        renderAll();
+      });
+      line.querySelector('[data-action="dec"]').addEventListener('click', e=>{
+        e.stopPropagation();
+        cart[id]--;
+        if(cart[id] <= 0) delete cart[id];
+        renderAll();
+      });
+    });
+  }
+
+  // ---------- Totals ----------
+  function renderTotals(){
+    const ids = Object.keys(cart).filter(id=>cart[id] > 0);
+    const subtotal = ids.reduce((sum,id)=>{
+      const item = menu.find(m=>m.id === Number(id));
+      return sum + item.price * cart[id];
+    }, 0);
+    const tax = Math.round(subtotal * 0.10);
+    const total = subtotal + tax;
+
+    document.getElementById('subtotalVal').textContent = fmt(subtotal);
+    document.getElementById('taxVal').textContent = fmt(tax);
+    document.getElementById('totalVal').textContent = fmt(total);
+
+    const cashierName = document.getElementById('cashierInput').value.trim();
+    document.getElementById('payBtn').disabled = (total === 0) || (cashierName === "");
+  }
+
+  function renderAll(){
+    renderMenu();
+    renderCart();
+    renderTotals();
+  }
+
+  // ---------- Filters ----------
+  document.getElementById('filterPills').addEventListener('click', e=>{
+    const btn = e.target.closest('.pill');
+    if(!btn) return;
+    document.querySelectorAll('.pill').forEach(p=>p.classList.remove('active'));
+    btn.classList.add('active');
+    activeCat = btn.dataset.cat;
+    renderMenu();
+  });
+
+  document.getElementById('searchInput').addEventListener('input', e=>{
+    searchTerm = e.target.value;
+    renderMenu();
+  });
+
+  document.getElementById('modeToggle').addEventListener('click', e=>{
+    const btn = e.target.closest('button');
+    if(!btn) return;
+    document.querySelectorAll('#modeToggle button').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    mode = btn.dataset.mode;
+  });
+
+  document.getElementById('cashierInput').addEventListener('input', e=>{
+    document.getElementById('cashierEcho').textContent = e.target.value.trim() || "—";
+    renderTotals();
+  });
+
+  document.getElementById('payBtn').addEventListener('click', ()=>{
+    const toast = document.getElementById('toast');
+    toast.classList.add('show');
+    setTimeout(()=>{
+      toast.classList.remove('show');
+      Object.keys(cart).forEach(k=>delete cart[k]);
+      renderAll();
+    }, 1400);
+  });
+
+  // ---------- Bottom nav ----------
+  document.querySelectorAll('.nav-item').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      if(btn.dataset.nav === 'cart') return;
+      document.querySelectorAll('.nav-item').forEach(b=>b.classList.remove('active'));
+      btn.classList.add('active');
+    });
+  });
+
+  renderAll();
+</script>
+
+</body>
+</html>

@@ -1,17 +1,26 @@
 <style>
-    .ch-page { display: flex; flex-direction: column; height: 100dvh; }
+    .pos-kasir.ch-page {
+        --brown-dark: #111827;
+        --brown-mid: #6B7280;
+        --brown-light: #9CA3AF;
+        --caramel-light: #E7EAF0;
+        --caramel: #4F46E5;
+    }
+
+    .ch-page { display: flex; flex-direction: column; height: 100svh; max-height: 100svh; overflow: hidden; }
     .ch-content {
-        flex: 1;
+        flex: 1 1 0;
         min-height: 0;
-        overflow: auto;
-        padding: 20px;
+        overflow-y: auto;
+        padding: 24px clamp(16px, 3vw, 28px);
         max-width: 1100px;
         width: 100%;
         margin: 0 auto;
+        color: #111827;
     }
     .ch-card {
         background: #fff;
-        border: 1px solid var(--caramel-light);
+        border: 1px solid #E7EAF0;
         border-radius: 14px;
         padding: 16px;
         box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
@@ -61,7 +70,7 @@
         transition: border-color 0.15s ease, box-shadow 0.15s ease;
     }
     .ch-row:hover { border-color: var(--caramel); box-shadow: 0 4px 12px rgba(37,99,235,0.08); }
-    .ch-row .ch-id { font-family: 'Menlo', ui-monospace, monospace; font-size: 12px; color: var(--brown-light); }
+    .ch-row .ch-id { font-family: 'DM Sans', ui-sans-serif, system-ui, sans-serif; font-size: 12px; color: var(--brown-light); }
     .ch-row .ch-trx-title { font-weight: 600; color: var(--brown-dark); font-size: 14px; }
     .ch-row .ch-trx-meta { font-size: 12px; color: var(--brown-light); margin-top: 2px; }
     .ch-row .ch-total { font-weight: 700; color: var(--brown-dark); text-align: right; }

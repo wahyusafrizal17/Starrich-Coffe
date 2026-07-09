@@ -58,18 +58,11 @@ window.StarrichPos = function StarrichPos(payload) {
         openBillName: '',
         cashierName: '',
         isAdmin: Boolean(payload.isAdmin),
+        userName: payload.userName || '',
         paymentSplits: [{ metode: 'cash', jumlah: '' }],
+        productImageErrors: {},
 
         init() {
-            const mq = window.matchMedia('(min-width: 1024px)');
-            const sync = () => {
-                if (mq.matches) {
-                    this.cartOpen = true;
-                }
-            };
-            sync();
-            mq.addEventListener('change', sync);
-
             queueMicrotask(() => {
                 const params = new URLSearchParams(window.location.search);
                 const editId = params.get('edit');
@@ -115,6 +108,28 @@ window.StarrichPos = function StarrichPos(payload) {
             return this.cart.reduce((s, i) => s + i.harga * i.qty, 0);
         },
 
+        productCartQty(productId) {
+            return this.cart
+                .filter((c) => Number(c.product_id) === Number(productId))
+                .reduce((sum, item) => sum + item.qty, 0);
+        },
+
+        productShowsImage(p) {
+            return Boolean(p.gambar) && !this.productImageErrors[p.id];
+        },
+
+        onProductImageError(productId) {
+            this.productImageErrors[productId] = true;
+        },
+
+        cashierEcho() {
+            if (this.isAdmin) {
+                return this.cashierName.trim() || '—';
+            }
+
+            return this.userName || '—';
+        },
+
         get addonModalExtraPreview() {
             let sum = 0;
             for (const opt of this.addonsCatalog || []) {
@@ -158,6 +173,20 @@ window.StarrichPos = function StarrichPos(payload) {
             }
             this.initPaymentSplits(this.cartTotal);
             this.payModalOpen = true;
+        },
+
+        openCartDock() {
+            const orderPanel = document.querySelector('.pos-kasir .order-side');
+            if (orderPanel) {
+                orderPanel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+            if (this.cart.length === 0) {
+                Alpine.store('toast').show('Keranjang masih kosong.', 'error');
+                return;
+            }
+            if (window.innerWidth >= 980) {
+                this.openPaymentModal();
+            }
         },
 
         openSettleModal(bill) {
@@ -604,13 +633,17 @@ window.StarrichPos = function StarrichPos(payload) {
             return '📦';
         },
 
-        categoryShort(p) {
+        categoryLabel(p) {
             const c = this.categories.find((x) => Number(x.id) === Number(p.kategori_id));
             if (! c) {
                 return '';
             }
-            const w = String(c.nama_kategori || '').trim().split(/\s+/)[0] || '';
-            return w ? w.slice(0, 8).toUpperCase() : '';
+
+            return String(c.nama_kategori || '').trim().toUpperCase();
+        },
+
+        categoryShort(p) {
+            return this.categoryLabel(p);
         },
 
         addProduct(p) {

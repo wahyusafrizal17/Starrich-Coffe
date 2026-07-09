@@ -22,12 +22,10 @@
     @include('cashier._cashier-list-styles')
 
     <div
-        class="pos-coffee ch-page"
+        class="pos-kasir ch-page"
         x-data="StarrichPos({{ \Illuminate\Support\Js::from($posPayload) }})"
         x-on:keydown.escape.window="if (payModalOpen) closePaymentModal()"
     >
-        @include('cashier._cashier-header', ['active' => 'open-bills', 'openBillsCount' => $openBillsCount])
-
         <div class="ch-content">
             <h1 style="font-size:22px;font-weight:700;color:var(--brown-dark);margin:0 0 4px">Open Bill</h1>
             <p style="font-size:13px;color:var(--brown-light);margin:0 0 18px">Tagihan yang belum lunas. Pilih untuk memproses pembayaran.</p>
@@ -125,6 +123,11 @@
                 </div>
             @endif
         </div>
+
+        @include('cashier._cashier-bottom-nav', [
+            'active' => 'open-bills',
+            'openBillsCount' => $openBillsCount,
+        ])
 
         @include('cashier._pay-modal')
     </div>

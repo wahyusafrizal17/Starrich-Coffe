@@ -6,9 +6,7 @@
     @include('cashier._pos-coffee-styles')
     @include('cashier._cashier-list-styles')
 
-    <div class="pos-coffee ch-page">
-        @include('cashier._cashier-header', ['active' => 'history', 'openBillsCount' => $openBillsCount])
-
+    <div class="pos-kasir ch-page">
         <div class="ch-content">
             <h1 style="font-size:22px;font-weight:700;color:var(--brown-dark);margin:0 0 4px">Riwayat Pesanan</h1>
             <p style="font-size:13px;color:var(--brown-light);margin:0 0 18px">Catatan semua transaksi kasir.</p>
@@ -121,6 +119,11 @@
                 <div class="ch-pagination">{{ $transactions->links() }}</div>
             @endif
         </div>
+
+        @include('cashier._cashier-bottom-nav', [
+            'active' => 'history',
+            'openBillsCount' => $openBillsCount,
+        ])
     </div>
 @endsection
 
