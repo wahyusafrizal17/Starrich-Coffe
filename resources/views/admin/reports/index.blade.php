@@ -134,6 +134,7 @@
                                     <option value="cash" @selected($columnFilters['filter_pembayaran'] === 'cash')>Cash</option>
                                     <option value="transfer" @selected($columnFilters['filter_pembayaran'] === 'transfer')>Transfer</option>
                                     <option value="qris" @selected($columnFilters['filter_pembayaran'] === 'qris')>QRIS</option>
+                                    <option value="karyawan" @selected($columnFilters['filter_pembayaran'] === 'karyawan')>Karyawan</option>
                                     <option value="split" @selected($columnFilters['filter_pembayaran'] === 'split')>Split</option>
                                 </select>
                             </th>
@@ -183,6 +184,7 @@
                                                         'cash' => 'Cash',
                                                         'transfer' => 'Transfer',
                                                         'qris' => 'QRIS',
+                                                        'karyawan' => 'Karyawan',
                                                         default => ucfirst($s['metode'] ?? '—'),
                                                     },
                                                     'jumlah' => format_rupiah((int) ($s['jumlah'] ?? 0)),

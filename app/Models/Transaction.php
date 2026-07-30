@@ -13,6 +13,9 @@ class Transaction extends Model
 
     public const STATUS_OPEN = 'open';
 
+    /** Pesanan karyawan: dicatat tanpa pembayaran (tidak masuk omzet). */
+    public const METHOD_KARYAWAN = 'karyawan';
+
     protected $fillable = [
         'total',
         'bayar',
@@ -56,10 +59,25 @@ class Transaction extends Model
         return $query->where('status', self::STATUS_PAID);
     }
 
+    /** Transaksi lunas yang menghasilkan omzet (bukan pencatatan karyawan). */
+    /** @param Builder<Transaction> $query */
+    public function scopePaidRevenue(Builder $query): Builder
+    {
+        return $query->paid()->where(function (Builder $q) {
+            $q->whereNull('metode_pembayaran')
+                ->orWhere('metode_pembayaran', '!=', self::METHOD_KARYAWAN);
+        });
+    }
+
     /** @param Builder<Transaction> $query */
     public function scopeOpen(Builder $query): Builder
     {
         return $query->where('status', self::STATUS_OPEN);
+    }
+
+    public function isKaryawan(): bool
+    {
+        return $this->metode_pembayaran === self::METHOD_KARYAWAN;
     }
 
     /** @return BelongsTo<User, $this> */
@@ -85,6 +103,7 @@ class Transaction extends Model
                     'cash' => 'Cash',
                     'transfer' => 'Transfer',
                     'qris' => 'QRIS',
+                    self::METHOD_KARYAWAN => 'Karyawan',
                     default => ucfirst($m),
                 })
                 ->implode(' + ');
@@ -94,6 +113,7 @@ class Transaction extends Model
             'cash' => 'Cash',
             'transfer' => 'Transfer',
             'qris' => 'QRIS',
+            self::METHOD_KARYAWAN => 'Karyawan',
             default => strtoupper($method),
         };
     }
@@ -107,6 +127,7 @@ class Transaction extends Model
             'transfer' => 'vx-badge-violet',
             'qris' => 'vx-badge-warning',
             'split' => 'vx-badge-primary',
+            self::METHOD_KARYAWAN => 'vx-badge-slate',
             default => 'vx-badge-slate',
         };
     }

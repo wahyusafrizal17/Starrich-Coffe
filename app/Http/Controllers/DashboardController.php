@@ -18,11 +18,11 @@ class DashboardController extends Controller
         $periodTitle = DashboardPeriodResolver::title($period);
         $periodLabel = DashboardPeriodResolver::label($period);
 
-        $periodTotal = (int) Transaction::paid()
+        $periodTotal = (int) Transaction::paidRevenue()
             ->whereBetween('created_at', [$period['dari'], $period['sampai']])
             ->sum('total');
 
-        $periodCount = Transaction::paid()
+        $periodCount = Transaction::paidRevenue()
             ->whereBetween('created_at', [$period['dari'], $period['sampai']])
             ->count();
 

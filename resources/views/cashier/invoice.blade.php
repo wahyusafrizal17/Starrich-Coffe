@@ -110,6 +110,11 @@
                     <div class="row" style="margin-top:8px;font-weight:700;color:#b45309">
                         <span>Status</span><span>BELUM LUNAS (OPEN BILL)</span>
                     </div>
+                @elseif ($transaction->isKaryawan())
+                    <div class="row" style="margin-top:8px;font-weight:700;color:#475569">
+                        <span>Status</span><span>PENCATATAN KARYAWAN</span>
+                    </div>
+                    <div class="row"><span>Dibayar</span><span>Rp 0</span></div>
                 @else
                     <div class="row"><span>Bayar</span><span>Rp {{ number_format($transaction->bayar, 0, ',', '.') }}</span></div>
                     <div class="row"><span>Kembalian</span><span>Rp {{ number_format($transaction->kembalian, 0, ',', '.') }}</span></div>
@@ -118,7 +123,7 @@
                     <div class="muted" style="font-size:11px; margin-bottom:4px;">Metode pembayaran</div>
                     @foreach ($transaction->payment_splits as $split)
                         <div class="row">
-                            <span>{{ ucfirst($split['metode'] ?? '—') }}</span>
+                            <span>{{ $transaction->paymentMethodLabel() === 'Karyawan' || ($split['metode'] ?? '') === 'karyawan' ? 'Karyawan' : ucfirst($split['metode'] ?? '—') }}</span>
                             <span>Rp {{ number_format((int) ($split['jumlah'] ?? 0), 0, ',', '.') }}</span>
                         </div>
                     @endforeach

@@ -156,6 +156,21 @@ window.StarrichPos = function StarrichPos(payload) {
             return Math.max(0, this.splitPaidTotal - this.payModalTotal);
         },
 
+        get isKaryawanPayment() {
+            return this.paymentSplits.length === 1 && this.paymentSplits[0]?.metode === 'karyawan';
+        },
+
+        onPaymentMethodChange(row) {
+            if (row.metode === 'karyawan') {
+                this.paymentSplits = [{ metode: 'karyawan', jumlah: '0' }];
+                return;
+            }
+            if (String(row.jumlah || '') === '0' || row.jumlah === '') {
+                const total = this.payModalTotal;
+                row.jumlah = total > 0 ? this.formatNominalInput(total) : '';
+            }
+        },
+
         openPaymentModal() {
             if (this.cart.length === 0) {
                 return;
@@ -191,6 +206,7 @@ window.StarrichPos = function StarrichPos(payload) {
 
         openSettleModal(bill) {
             this.settlingBill = bill;
+            this.openBillName = bill?.nama_pelanggan || '';
             this.initPaymentSplits(bill.total);
             this.payModalOpen = true;
         },
@@ -575,7 +591,10 @@ window.StarrichPos = function StarrichPos(payload) {
                 const pres = await fetch(payUrl, {
                     method: 'POST',
                     headers: this.jsonHeaders(),
-                    body: JSON.stringify({ payment_splits: splits }),
+                    body: JSON.stringify({
+                        payment_splits: splits,
+                        nama_pelanggan: this.openBillName.trim() || null,
+                    }),
                 });
                 const pdata = await this.parseJsonResponse(pres);
                 if (! pres.ok) {
@@ -586,12 +605,17 @@ window.StarrichPos = function StarrichPos(payload) {
                 const trxTotal = pdata?.data?.total ?? newTotal;
                 const bayar = pdata?.data?.bayar ?? paidOk;
                 const kembalian = pdata?.data?.kembalian ?? Math.max(0, bayar - trxTotal);
+                const isKaryawan = splits[0]?.metode === 'karyawan';
                 this.editingOpenBillId = null;
                 this.cart = [];
                 this.closePaymentModal();
                 this.paymentSplits = [{ metode: 'cash', jumlah: '' }];
                 this.syncOpenBills(pdata.open_bills);
-                this.showSuccessAlert({ trxId, total: trxTotal, bayar, kembalian });
+                if (isKaryawan) {
+                    Alpine.store('toast').show(pdata.message || 'Pesanan karyawan dicatat.', 'success');
+                } else {
+                    this.showSuccessAlert({ trxId, total: trxTotal, bayar, kembalian });
+                }
             } catch {
                 Alpine.store('toast').show('Koneksi bermasalah.', 'error');
             } finally {
@@ -606,6 +630,9 @@ window.StarrichPos = function StarrichPos(payload) {
         },
 
         addSplitRow() {
+            if (this.isKaryawanPayment) {
+                return;
+            }
             this.paymentSplits.push({ metode: 'cash', jumlah: '' });
         },
 
@@ -737,15 +764,27 @@ window.StarrichPos = function StarrichPos(payload) {
         },
 
         buildPaymentSplits() {
+            if (this.isKaryawanPayment) {
+                return [{ metode: 'karyawan', jumlah: 0 }];
+            }
+
             return this.paymentSplits
                 .map((row) => ({
                     metode: row.metode,
                     jumlah: Math.round(this.parseRupiahInput(row.jumlah)),
                 }))
-                .filter((row) => row.jumlah > 0);
+                .filter((row) => row.jumlah > 0 && row.metode !== 'karyawan');
         },
 
         validatePaymentSplits(splits, total) {
+            if (splits.length === 1 && splits[0].metode === 'karyawan') {
+                const nama = this.openBillName.trim() || (this.settlingBill?.nama_pelanggan || '');
+                if (! nama) {
+                    Alpine.store('toast').show('Isi nama karyawan untuk pencatatan.', 'error');
+                    return false;
+                }
+                return true;
+            }
             if (splits.length === 0) {
                 Alpine.store('toast').show('Isi minimal satu nominal pembayaran.', 'error');
                 return false;
@@ -842,6 +881,7 @@ window.StarrichPos = function StarrichPos(payload) {
                     body: JSON.stringify({
                         action: 'pay',
                         order_type: this.orderType,
+                        nama_pelanggan: this.openBillName.trim() || null,
                         items: this.cartItemsForApi(),
                         payment_splits: splits,
                         ...this.cashierPayload(),
@@ -856,11 +896,16 @@ window.StarrichPos = function StarrichPos(payload) {
                 const trxTotal = data?.data?.total ?? total;
                 const bayar = data?.data?.bayar ?? paid;
                 const kembalian = data?.data?.kembalian ?? Math.max(0, bayar - trxTotal);
+                const isKaryawan = (data?.data?.metode || splits[0]?.metode) === 'karyawan';
                 this.cart = [];
                 this.closePaymentModal();
                 this.paymentSplits = [{ metode: 'cash', jumlah: '' }];
                 this.syncOpenBills(data.open_bills);
-                this.showSuccessAlert({ trxId, total: trxTotal, bayar, kembalian });
+                if (isKaryawan) {
+                    Alpine.store('toast').show(data.message || 'Pesanan karyawan dicatat.', 'success');
+                } else {
+                    this.showSuccessAlert({ trxId, total: trxTotal, bayar, kembalian });
+                }
             } catch {
                 Alpine.store('toast').show('Koneksi bermasalah.', 'error');
             } finally {
@@ -880,7 +925,10 @@ window.StarrichPos = function StarrichPos(payload) {
                 const res = await fetch(url, {
                     method: 'POST',
                     headers: this.jsonHeaders(),
-                    body: JSON.stringify({ payment_splits: splits }),
+                    body: JSON.stringify({
+                        payment_splits: splits,
+                        nama_pelanggan: this.openBillName.trim() || null,
+                    }),
                 });
                 const data = await this.parseJsonResponse(res);
                 if (! res.ok) {
@@ -891,11 +939,16 @@ window.StarrichPos = function StarrichPos(payload) {
                 const trxTotal = data?.data?.total ?? total;
                 const bayar = data?.data?.bayar ?? paid;
                 const kembalian = data?.data?.kembalian ?? Math.max(0, bayar - trxTotal);
+                const isKaryawan = splits[0]?.metode === 'karyawan';
                 this.closePaymentModal();
                 this.paymentSplits = [{ metode: 'cash', jumlah: '' }];
                 this.openBills = this.openBills.filter((b) => b.id !== billId);
                 this.syncOpenBills(data.open_bills);
-                this.showSuccessAlert({ trxId, total: trxTotal, bayar, kembalian });
+                if (isKaryawan) {
+                    Alpine.store('toast').show(data.message || 'Pesanan karyawan dicatat.', 'success');
+                } else {
+                    this.showSuccessAlert({ trxId, total: trxTotal, bayar, kembalian });
+                }
             } catch {
                 Alpine.store('toast').show('Koneksi bermasalah.', 'error');
             } finally {

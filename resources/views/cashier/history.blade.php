@@ -84,7 +84,7 @@
                                 </p>
                             </div>
                             <div>
-                                <span class="ch-method js-method-badge {{ $t->isOpen() ? 'open_bill' : (in_array($method, ['cash','transfer','qris','split','open_bill']) ? $method : '') }}">
+                                <span class="ch-method js-method-badge {{ $t->isOpen() ? 'open_bill' : (in_array($method, ['cash','transfer','qris','split','open_bill','karyawan']) ? $method : '') }}">
                                     {{ $methodLabel }}
                                 </span>
                             </div>
@@ -134,6 +134,7 @@
                 { value: 'cash', label: 'Cash' },
                 { value: 'transfer', label: 'Transfer' },
                 { value: 'qris', label: 'QRIS' },
+                { value: 'karyawan', label: 'Karyawan' },
             ];
 
             function methodSelect(name, selected) {

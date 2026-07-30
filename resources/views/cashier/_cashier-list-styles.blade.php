@@ -78,6 +78,7 @@
     .ch-row .ch-method.cash { background: #dcfce7; color: #15803d; }
     .ch-row .ch-method.transfer { background: #ede9fe; color: #6d28d9; }
     .ch-row .ch-method.qris { background: #fef3c7; color: #b45309; }
+    .ch-row .ch-method.karyawan { background: #e2e8f0; color: #475569; }
     .ch-row .ch-method.split { background: #cffafe; color: #0e7490; }
     .ch-row .ch-method.open_bill { background: #fef3c7; color: #b45309; }
     .ch-actions { display: flex; flex-wrap: wrap; gap: 6px; justify-content: flex-end; }

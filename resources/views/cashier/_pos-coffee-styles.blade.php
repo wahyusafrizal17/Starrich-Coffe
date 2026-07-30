@@ -915,6 +915,21 @@
   .pos-kasir .pc-pay-modal-tagihan-label { font-size: 11px; color: var(--ink-faint); text-transform: uppercase; letter-spacing: 0.08em; }
   .pos-kasir .pc-pay-modal-tagihan-amount { font-family: 'DM Sans', ui-sans-serif, system-ui, sans-serif; font-size: 22px; color: var(--primary); font-weight: 600; }
   .pos-kasir .pc-pay-modal-section-label { font-size: 11px; font-weight: 600; color: var(--ink-faint); text-transform: uppercase; letter-spacing: 0.06em; margin: 12px 0 8px; }
+  .pos-kasir .pc-pay-modal-karyawan-hint {
+    margin: -2px 0 10px;
+    padding: 10px 12px;
+    border-radius: 10px;
+    background: #F1F5F9;
+    border: 1px solid #E2E8F0;
+    color: #64748B;
+    font-size: 12px;
+    line-height: 1.45;
+  }
+  .pos-kasir .pc-split-amount:disabled {
+    background: var(--surface);
+    color: var(--ink-faint);
+    cursor: default;
+  }
   .pos-kasir .pc-pay-modal-name-input,
   .pos-kasir .pc-pay-modal-select,
   .pos-kasir .pc-split-amount {

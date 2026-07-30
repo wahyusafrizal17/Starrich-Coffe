@@ -120,7 +120,7 @@ class ReportController extends Controller
         $rangeStart = $period['dari'];
         $rangeEnd = $period['sampai'];
 
-        $salesRevenue = (int) Transaction::paid()
+        $salesRevenue = (int) Transaction::paidRevenue()
             ->whereBetween('created_at', [$rangeStart, $rangeEnd])
             ->sum('total');
 

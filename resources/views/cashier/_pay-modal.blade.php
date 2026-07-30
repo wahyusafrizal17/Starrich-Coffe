@@ -14,9 +14,9 @@
         x-on:click.stop
     >
         <header class="pc-pay-modal-head">
-            <h3 id="pc-pay-modal-title" class="pc-pay-modal-title" x-text="settlingBill ? 'Bayar Open Bill' : (editingOpenBillId ? 'Bayar (edit open bill)' : 'Pembayaran')"></h3>
+            <h3 id="pc-pay-modal-title" class="pc-pay-modal-title" x-text="settlingBill ? 'Bayar Open Bill' : (editingOpenBillId ? 'Bayar (edit open bill)' : (isKaryawanPayment ? 'Pencatatan Karyawan' : 'Pembayaran'))"></h3>
             <div class="pc-pay-modal-tagihan-block">
-                <span class="pc-pay-modal-tagihan-label">Tagihan</span>
+                <span class="pc-pay-modal-tagihan-label" x-text="isKaryawanPayment ? 'Nilai pesanan' : 'Tagihan'"></span>
                 <strong class="pc-pay-modal-tagihan-amount" x-text="formatRp(payModalTotal)"></strong>
             </div>
             <p class="pc-pay-modal-settle-hint" x-show="settlingBill" x-cloak>
@@ -25,34 +25,44 @@
             </p>
         </header>
 
-        <div class="pc-pay-modal-name-wrap" x-show="!settlingBill && !editingOpenBillId" x-cloak>
-            <label class="pc-pay-modal-section-label" for="pc-open-bill-name">Nama pelanggan</label>
+        <div class="pc-pay-modal-name-wrap" x-show="isKaryawanPayment || (!settlingBill && !editingOpenBillId)" x-cloak>
+            <label class="pc-pay-modal-section-label" for="pc-open-bill-name" x-text="isKaryawanPayment ? 'Nama karyawan' : 'Nama pelanggan'"></label>
             <input
                 id="pc-open-bill-name"
                 type="text"
                 class="pc-pay-modal-name-input"
                 x-model="openBillName"
-                placeholder="Contoh: Budi / Meja 3"
+                :placeholder="isKaryawanPayment ? 'Contoh: Budi (barista)' : 'Contoh: Budi / Meja 3'"
                 maxlength="100"
                 autocomplete="off"
             />
         </div>
 
-        <p class="pc-pay-modal-section-label">Metode & nominal</p>
+        <p class="pc-pay-modal-section-label">Metode &amp; nominal</p>
+        <p class="pc-pay-modal-karyawan-hint" x-show="isKaryawanPayment" x-cloak>
+            Pesanan karyawan dicatat tanpa pembayaran dan tidak masuk omzet.
+        </p>
         <template x-for="(row, idx) in paymentSplits" :key="idx">
             <div class="pc-split-row">
-                <select class="pc-pay-modal-select" x-model="row.metode">
+                <select
+                    class="pc-pay-modal-select"
+                    x-model="row.metode"
+                    x-on:change="onPaymentMethodChange(row)"
+                >
                     <option value="qris">QRIS</option>
                     <option value="transfer">Transfer</option>
                     <option value="cash">Cash</option>
+                    <option value="karyawan">Karyawan (gratis)</option>
                 </select>
                 <input
                     type="text"
                     class="pc-split-amount"
                     inputmode="numeric"
                     autocomplete="off"
-                    placeholder="0"
-                    :value="row.jumlah"
+                    :placeholder="row.metode === 'karyawan' ? 'Gratis' : '0'"
+                    :value="row.metode === 'karyawan' ? '0' : row.jumlah"
+                    :readonly="row.metode === 'karyawan'"
+                    :disabled="row.metode === 'karyawan'"
                     x-on:input="onSplitNominalInput(row, $event)"
                 />
                 <button
@@ -67,16 +77,22 @@
             </div>
         </template>
 
-        <button type="button" class="pc-split-add" x-on:click="addSplitRow()">
+        <button
+            type="button"
+            class="pc-split-add"
+            x-show="!isKaryawanPayment"
+            x-cloak
+            x-on:click="addSplitRow()"
+        >
             + Tambah pembagian
         </button>
 
         <div class="pc-pay-modal-summary">
             <div class="pc-pay-modal-summary-row">
-                <span>Terbayar</span>
-                <span x-text="formatRp(splitPaidTotal)"></span>
+                <span x-text="isKaryawanPayment ? 'Dibayar' : 'Terbayar'"></span>
+                <span x-text="formatRp(isKaryawanPayment ? 0 : splitPaidTotal)"></span>
             </div>
-            <div class="pc-pay-modal-summary-row">
+            <div class="pc-pay-modal-summary-row" x-show="!isKaryawanPayment">
                 <span>Kembalian</span>
                 <span x-text="formatRp(splitKembalian)"></span>
             </div>
@@ -86,7 +102,7 @@
             <button
                 type="button"
                 class="pc-pay-modal-open-bill"
-                x-show="!settlingBill && !editingOpenBillId"
+                x-show="!settlingBill && !editingOpenBillId && !isKaryawanPayment"
                 x-on:click="submitOpenBill()"
                 :disabled="paying"
             >
@@ -99,7 +115,7 @@
                 x-on:click="submitCheckout()"
                 :disabled="paying"
             >
-                <span x-show="!paying" x-text="settlingBill ? 'Lunas' : 'Bayar'"></span>
+                <span x-show="!paying" x-text="isKaryawanPayment ? 'Catat' : (settlingBill ? 'Lunas' : 'Bayar')"></span>
                 <span x-show="paying" x-cloak>Memproses…</span>
             </button>
         </div>

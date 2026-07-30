@@ -141,9 +141,9 @@ class CashierController extends Controller
         }
 
         $data = $request->validate([
-            'metode' => ['nullable', 'string', 'in:cash,transfer,qris'],
+            'metode' => ['nullable', 'string', 'in:cash,transfer,qris,karyawan'],
             'payment_splits' => ['nullable', 'array', 'min:1'],
-            'payment_splits.*.metode' => ['required_with:payment_splits', 'string', 'in:cash,transfer,qris'],
+            'payment_splits.*.metode' => ['required_with:payment_splits', 'string', 'in:cash,transfer,qris,karyawan'],
             'payment_splits.*.jumlah' => ['required_with:payment_splits', 'integer', 'min:0'],
         ]);
 
@@ -154,17 +154,27 @@ class CashierController extends Controller
         }
 
         if (! empty($data['payment_splits'])) {
-            $splits = $this->normalizePaymentSplits($data['payment_splits']);
-            $splitSum = (int) collect($splits)->sum('jumlah');
+            $resolved = $this->resolvePaymentFromSplits($data['payment_splits'], (int) $transaction->bayar, true);
+            $splits = $resolved['splits'];
+            $metodeLabel = $resolved['metode'];
+        } else {
+            if (($data['metode'] ?? '') === Transaction::METHOD_KARYAWAN) {
+                $splits = [['metode' => Transaction::METHOD_KARYAWAN, 'jumlah' => 0]];
+                $metodeLabel = Transaction::METHOD_KARYAWAN;
+                $transaction->update([
+                    'bayar' => 0,
+                    'kembalian' => 0,
+                    'metode_pembayaran' => $metodeLabel,
+                    'payment_splits' => $splits,
+                ]);
 
-            if ($splitSum !== (int) $transaction->bayar) {
-                throw ValidationException::withMessages([
-                    'payment_splits' => 'Total pembayaran harus sama dengan nominal bayar transaksi.',
+                return response()->json([
+                    'ok' => true,
+                    'message' => 'Metode pembayaran diperbarui.',
+                    'metode_pembayaran' => $metodeLabel,
                 ]);
             }
 
-            $metodeLabel = count($splits) > 1 ? 'split' : $splits[0]['metode'];
-        } else {
             $existing = is_array($transaction->payment_splits) ? $transaction->payment_splits : [];
 
             if (count($existing) > 1) {
@@ -184,6 +194,11 @@ class CashierController extends Controller
         $transaction->update([
             'metode_pembayaran' => $metodeLabel,
             'payment_splits' => $splits,
+            ...(
+                $metodeLabel === Transaction::METHOD_KARYAWAN
+                    ? ['bayar' => 0, 'kembalian' => 0]
+                    : []
+            ),
         ]);
 
         return response()->json([
@@ -206,7 +221,7 @@ class CashierController extends Controller
         $rules = [
             'action' => ['nullable', 'string', 'in:pay,open_bill'],
             'order_type' => ['nullable', 'string', 'in:dine,take'],
-            'nama_pelanggan' => ['required_if:action,open_bill', 'nullable', 'string', 'max:100'],
+            'nama_pelanggan' => ['nullable', 'string', 'max:100'],
             'items' => ['required', 'array', 'min:1'],
             'items.*.product_id' => ['required', 'integer', 'exists:products,id'],
             'items.*.qty' => ['required', 'integer', 'min:1'],
@@ -214,7 +229,7 @@ class CashierController extends Controller
             'items.*.addons' => ['nullable', 'array'],
             'items.*.addons.*' => ['string', Rule::in(OrderAddonCatalog::validCodes())],
             'payment_splits' => ['nullable', 'array'],
-            'payment_splits.*.metode' => ['required_with:payment_splits', 'string', 'in:qris,transfer,cash'],
+            'payment_splits.*.metode' => ['required_with:payment_splits', 'string', 'in:qris,transfer,cash,karyawan'],
             'payment_splits.*.jumlah' => ['required_with:payment_splits', 'integer', 'min:0'],
         ];
 
@@ -227,6 +242,12 @@ class CashierController extends Controller
         $action = $data['action'] ?? 'pay';
 
         if ($action === 'open_bill') {
+            if (trim((string) ($data['nama_pelanggan'] ?? '')) === '') {
+                throw ValidationException::withMessages([
+                    'nama_pelanggan' => 'Isi nama pelanggan untuk open bill.',
+                ]);
+            }
+
             return $this->storeOpenBill($request, $data);
         }
 
@@ -357,44 +378,52 @@ class CashierController extends Controller
 
         $data = $request->validate([
             'payment_splits' => ['required', 'array', 'min:1'],
-            'payment_splits.*.metode' => ['required', 'string', 'in:qris,transfer,cash'],
+            'payment_splits.*.metode' => ['required', 'string', 'in:qris,transfer,cash,karyawan'],
             'payment_splits.*.jumlah' => ['required', 'integer', 'min:0'],
+            'nama_pelanggan' => ['nullable', 'string', 'max:100'],
         ]);
 
         $total = (int) $transaction->total;
 
         $result = DB::transaction(function () use ($data, $transaction, $total) {
-            $splits = $this->normalizePaymentSplits($data['payment_splits'] ?? []);
-            $bayar = (int) collect($splits)->sum('jumlah');
+            $resolved = $this->resolvePaymentFromSplits($data['payment_splits'] ?? [], $total);
 
-            if ($bayar < $total) {
-                throw ValidationException::withMessages([
-                    'payment_splits' => 'Total pembayaran kurang dari tagihan.',
-                ]);
+            if ($resolved['metode'] === Transaction::METHOD_KARYAWAN) {
+                $nama = trim((string) ($data['nama_pelanggan'] ?? $transaction->nama_pelanggan ?? ''));
+                if ($nama === '') {
+                    throw ValidationException::withMessages([
+                        'nama_pelanggan' => 'Isi nama karyawan untuk pencatatan.',
+                    ]);
+                }
             }
 
-            $kembalian = $bayar - $total;
-            $metodeLabel = count($splits) > 1 ? 'split' : $splits[0]['metode'];
-
-            $transaction->update([
-                'bayar' => $bayar,
-                'kembalian' => $kembalian,
-                'metode_pembayaran' => $metodeLabel,
-                'payment_splits' => $splits,
+            $updates = [
+                'bayar' => $resolved['bayar'],
+                'kembalian' => $resolved['kembalian'],
+                'metode_pembayaran' => $resolved['metode'],
+                'payment_splits' => $resolved['splits'],
                 'status' => Transaction::STATUS_PAID,
-            ]);
+            ];
+
+            if ($resolved['metode'] === Transaction::METHOD_KARYAWAN) {
+                $updates['nama_pelanggan'] = trim((string) ($data['nama_pelanggan'] ?? $transaction->nama_pelanggan));
+            }
+
+            $transaction->update($updates);
 
             return [
                 'transaction_id' => $transaction->id,
                 'total' => $total,
-                'bayar' => $bayar,
-                'kembalian' => $kembalian,
+                'bayar' => $resolved['bayar'],
+                'kembalian' => $resolved['kembalian'],
             ];
         });
 
         return response()->json([
             'ok' => true,
-            'message' => 'Pembayaran open bill berhasil.',
+            'message' => ($result['bayar'] === 0 && $transaction->fresh()->isKaryawan())
+                ? 'Pesanan karyawan dicatat.'
+                : 'Pembayaran open bill berhasil.',
             'data' => $result,
             'open_bills' => $this->openBillsPayload(),
         ]);
@@ -446,26 +475,24 @@ class CashierController extends Controller
         $result = DB::transaction(function () use ($data, $request) {
             [$total, $prepared] = $this->prepareLineItems($data['items']);
 
-            $splits = $this->normalizePaymentSplits($data['payment_splits'] ?? []);
-            $bayar = (int) collect($splits)->sum('jumlah');
+            $resolved = $this->resolvePaymentFromSplits($data['payment_splits'] ?? [], $total);
 
-            if ($bayar < $total) {
+            $namaPelanggan = trim((string) ($data['nama_pelanggan'] ?? ''));
+            if ($resolved['metode'] === Transaction::METHOD_KARYAWAN && $namaPelanggan === '') {
                 throw ValidationException::withMessages([
-                    'payment_splits' => 'Total pembayaran kurang dari tagihan.',
+                    'nama_pelanggan' => 'Isi nama karyawan untuk pencatatan.',
                 ]);
             }
 
-            $kembalian = $bayar - $total;
-            $metodeLabel = count($splits) > 1 ? 'split' : $splits[0]['metode'];
-
             $transaction = Transaction::create([
                 'total' => $total,
-                'bayar' => $bayar,
-                'kembalian' => $kembalian,
-                'metode_pembayaran' => $metodeLabel,
-                'payment_splits' => $splits,
+                'bayar' => $resolved['bayar'],
+                'kembalian' => $resolved['kembalian'],
+                'metode_pembayaran' => $resolved['metode'],
+                'payment_splits' => $resolved['splits'],
                 'status' => Transaction::STATUS_PAID,
                 'order_type' => $data['order_type'] ?? null,
+                'nama_pelanggan' => $namaPelanggan !== '' ? $namaPelanggan : null,
                 'nama_kasir' => $this->resolvedCashierName($request, $data),
                 'user_id' => $request->user()->id,
             ]);
@@ -475,14 +502,17 @@ class CashierController extends Controller
             return [
                 'transaction_id' => $transaction->id,
                 'total' => $total,
-                'bayar' => $bayar,
-                'kembalian' => $kembalian,
+                'bayar' => $resolved['bayar'],
+                'kembalian' => $resolved['kembalian'],
+                'metode' => $resolved['metode'],
             ];
         });
 
+        $isKaryawan = ($result['metode'] ?? '') === Transaction::METHOD_KARYAWAN;
+
         return response()->json([
             'ok' => true,
-            'message' => 'Transaksi berhasil disimpan.',
+            'message' => $isKaryawan ? 'Pesanan karyawan dicatat.' : 'Transaksi berhasil disimpan.',
             'data' => $result,
             'open_bills' => $this->openBillsPayload(),
         ]);
@@ -554,6 +584,63 @@ class CashierController extends Controller
 
     /**
      * @param  array<int, array{metode?: string, jumlah?: int}>  $rows
+     * @return array{metode: string, splits: list<array{metode: string, jumlah: int}>, bayar: int, kembalian: int}
+     */
+    private function resolvePaymentFromSplits(array $rows, int $total, bool $exactMatch = false): array
+    {
+        $normalizedRows = collect($rows)
+            ->map(fn (array $row) => [
+                'metode' => (string) ($row['metode'] ?? ''),
+                'jumlah' => (int) ($row['jumlah'] ?? 0),
+            ])
+            ->values()
+            ->all();
+
+        $karyawanRows = array_values(array_filter(
+            $normalizedRows,
+            fn (array $row) => $row['metode'] === Transaction::METHOD_KARYAWAN
+        ));
+
+        if ($karyawanRows !== []) {
+            if (count($normalizedRows) !== 1) {
+                throw ValidationException::withMessages([
+                    'payment_splits' => 'Metode Karyawan tidak bisa digabung dengan pembayaran lain.',
+                ]);
+            }
+
+            return [
+                'metode' => Transaction::METHOD_KARYAWAN,
+                'splits' => [['metode' => Transaction::METHOD_KARYAWAN, 'jumlah' => 0]],
+                'bayar' => 0,
+                'kembalian' => 0,
+            ];
+        }
+
+        $splits = $this->normalizePaymentSplits($normalizedRows);
+        $bayar = (int) collect($splits)->sum('jumlah');
+
+        if ($exactMatch) {
+            if ($bayar !== $total) {
+                throw ValidationException::withMessages([
+                    'payment_splits' => 'Total pembayaran harus sama dengan nominal bayar transaksi.',
+                ]);
+            }
+        } elseif ($bayar < $total) {
+            throw ValidationException::withMessages([
+                'payment_splits' => 'Total pembayaran kurang dari tagihan.',
+            ]);
+        }
+
+        return [
+            'metode' => count($splits) > 1 ? 'split' : $splits[0]['metode'],
+            'splits' => $splits,
+            'bayar' => $bayar,
+            'kembalian' => max(0, $bayar - $total),
+        ];
+    }
+
+    /**
+     * @param  array<int, array{metode?: string, jumlah?: int}>  $rows
      * @return list<array{metode: string, jumlah: int}>
      */
     private function normalizePaymentSplits(array $rows): array
@@ -563,7 +650,7 @@ class CashierController extends Controller
                 'metode' => $row['metode'],
                 'jumlah' => (int) $row['jumlah'],
             ])
-            ->filter(fn (array $row) => $row['jumlah'] > 0)
+            ->filter(fn (array $row) => $row['jumlah'] > 0 && $row['metode'] !== Transaction::METHOD_KARYAWAN)
             ->values()
             ->all();
 
