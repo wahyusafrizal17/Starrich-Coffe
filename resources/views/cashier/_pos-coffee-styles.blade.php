@@ -338,9 +338,25 @@
 
   .pos-kasir .item-meta {
     display: flex;
-    align-items: center;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 6px;
     margin-top: auto;
     width: 100%;
+  }
+
+  .pos-kasir .item-price-wrap {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+  }
+
+  .pos-kasir .item-price-old {
+    font-size: 10px;
+    color: var(--ink-faint);
+    text-decoration: line-through;
+    line-height: 1.1;
   }
 
   .pos-kasir .item-price {
@@ -349,6 +365,26 @@
     font-weight: 700;
     letter-spacing: -0.01em;
     white-space: nowrap;
+  }
+
+  .pos-kasir .item-discount-badge {
+    flex-shrink: 0;
+    font-size: 9px;
+    font-weight: 700;
+    color: #BE123C;
+    background: #FFF1F2;
+    border: 1px solid #FECDD3;
+    border-radius: 999px;
+    padding: 3px 6px;
+    white-space: nowrap;
+  }
+
+  .pos-kasir .cart-item-discount {
+    display: block;
+    font-size: 11px;
+    color: #BE123C;
+    margin-top: 3px;
+    font-weight: 600;
   }
 
   .pos-kasir .qty-badge {
@@ -678,6 +714,75 @@
     font-weight: 700;
     color: var(--primary);
     letter-spacing: -0.02em;
+  }
+
+  .pos-kasir .discount-field {
+    margin: 10px 0 8px;
+  }
+
+  .pos-kasir .discount-field label {
+    font-size: 10px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    display: block;
+    margin-bottom: 6px;
+    font-weight: 600;
+  }
+
+  .pos-kasir .discount-input-wrap {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    background: var(--surface);
+    border: 1px solid transparent;
+    border-radius: 10px;
+    overflow: hidden;
+    transition: border-color 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
+  }
+
+  .pos-kasir .discount-input-wrap:focus-within {
+    border-color: var(--primary);
+    background: var(--white);
+    box-shadow: 0 0 0 3px rgba(30, 64, 175, 0.1);
+  }
+
+  .pos-kasir .discount-prefix {
+    padding: 10px 0 10px 12px;
+    color: var(--ink-faint);
+    font-size: 13px;
+    font-weight: 600;
+  }
+
+  .pos-kasir .discount-input-wrap input {
+    flex: 1;
+    min-width: 0;
+    border: none;
+    background: transparent;
+    padding: 10px 12px 10px 6px;
+    color: var(--ink);
+    font-family: inherit;
+    font-size: 13.5px;
+    outline: none;
+  }
+
+  .pos-kasir .discount-input-wrap input:disabled {
+    color: var(--ink-faint);
+    cursor: not-allowed;
+  }
+
+  .pos-kasir .discount-value {
+    color: #DC2626;
+    font-weight: 600;
+  }
+
+  .pos-kasir .discount-promo-label {
+    color: var(--ink-muted);
+    font-size: 12px;
+    max-width: 60%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   .pos-kasir .cashier-field {

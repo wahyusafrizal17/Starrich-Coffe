@@ -50,6 +50,8 @@ window.StarrichPos = function StarrichPos(payload) {
         varianModalOpen: false,
         varianModalProduct: null,
         addonsCatalog: payload.addonsCatalog ?? [],
+        cartPromos: payload.cartPromos ?? [],
+        discountManual: false,
         addonModalOpen: false,
         addonModalProduct: null,
         addonModalSelected: {},
@@ -57,6 +59,7 @@ window.StarrichPos = function StarrichPos(payload) {
         pendingLineSuhu: null,
         openBillName: '',
         cashierName: '',
+        discountInput: '',
         isAdmin: Boolean(payload.isAdmin),
         userName: payload.userName || '',
         paymentSplits: [{ metode: 'cash', jumlah: '' }],
@@ -108,6 +111,60 @@ window.StarrichPos = function StarrichPos(payload) {
             return this.cart.reduce((s, i) => s + i.harga * i.qty, 0);
         },
 
+        get autoCartPromo() {
+            const subtotal = this.cartTotal;
+            let best = null;
+            let bestAmount = 0;
+            for (const promo of this.cartPromos || []) {
+                const min = Number(promo.min_belanja) || 0;
+                if (min > 0 && subtotal < min) {
+                    continue;
+                }
+                let amount = 0;
+                if (promo.tipe_nilai === 'percent') {
+                    amount = Math.floor(subtotal * (Math.min(100, Number(promo.jumlah) || 0) / 100));
+                } else {
+                    amount = Math.min(subtotal, Number(promo.jumlah) || 0);
+                }
+                if (amount > bestAmount) {
+                    bestAmount = amount;
+                    best = { ...promo, amount };
+                }
+            }
+            return best;
+        },
+
+        get autoCartDiscount() {
+            return this.autoCartPromo ? Number(this.autoCartPromo.amount) || 0 : 0;
+        },
+
+        get discountAmount() {
+            if (! this.discountManual && this.autoCartDiscount > 0) {
+                return Math.min(this.autoCartDiscount, this.cartTotal);
+            }
+            const raw = this.parseRupiahInput(this.discountInput);
+            return Math.min(Math.max(0, raw), this.cartTotal);
+        },
+
+        get payableTotal() {
+            return Math.max(0, this.cartTotal - this.discountAmount);
+        },
+
+        onDiscountInput(event) {
+            this.discountManual = true;
+            const digits = event.target.value.replace(/\D/g, '');
+            if (digits === '') {
+                this.discountInput = '';
+                this.discountManual = false;
+                return;
+            }
+            let amount = Number(digits);
+            if (amount > this.cartTotal) {
+                amount = this.cartTotal;
+            }
+            this.discountInput = amount > 0 ? this.formatNominalInput(amount) : '';
+        },
+
         productCartQty(productId) {
             return this.cart
                 .filter((c) => Number(c.product_id) === Number(productId))
@@ -149,7 +206,7 @@ window.StarrichPos = function StarrichPos(payload) {
             if (this.settlingBill) {
                 return Number(this.settlingBill.total) || 0;
             }
-            return this.cartTotal;
+            return this.payableTotal;
         },
 
         get splitKembalian() {
@@ -186,7 +243,7 @@ window.StarrichPos = function StarrichPos(payload) {
             if (! this.editingOpenBillId) {
                 this.openBillName = '';
             }
-            this.initPaymentSplits(this.cartTotal);
+            this.initPaymentSplits(this.payableTotal);
             this.payModalOpen = true;
         },
 
@@ -443,6 +500,9 @@ window.StarrichPos = function StarrichPos(payload) {
                 this.openBillName = d.nama_pelanggan || '';
                 this.cashierName = d.nama_kasir || '';
                 this.orderType = d.order_type === 'take' ? 'take' : 'dine';
+                const diskon = Number(d.diskon) || 0;
+                this.discountInput = diskon > 0 ? this.formatNominalInput(diskon) : '';
+                this.discountManual = diskon > 0;
                 this.cart = (d.items || []).map((row) => {
                     const pid = Number(row.product_id);
                     const product = this.products.find((p) => Number(p.id) === pid);
@@ -499,6 +559,10 @@ window.StarrichPos = function StarrichPos(payload) {
             return { nama_kasir: this.cashierName.trim() };
         },
 
+        discountPayload() {
+            return { diskon: this.discountAmount };
+        },
+
         async saveOpenBillEdits() {
             if (! this.editingOpenBillId || this.cart.length === 0) {
                 Alpine.store('toast').show('Keranjang kosong.', 'error');
@@ -519,6 +583,7 @@ window.StarrichPos = function StarrichPos(payload) {
                     body: JSON.stringify({
                         order_type: this.orderType,
                         items: this.cartItemsForApi(),
+                        ...this.discountPayload(),
                         ...this.cashierPayload(),
                     }),
                 });
@@ -541,6 +606,8 @@ window.StarrichPos = function StarrichPos(payload) {
             this.cart = [];
             this.openBillName = '';
             this.cashierName = '';
+            this.discountInput = '';
+            this.discountManual = false;
             this.orderType = 'dine';
             this.payModalOpen = false;
             this.settlingBill = null;
@@ -566,6 +633,7 @@ window.StarrichPos = function StarrichPos(payload) {
                     body: JSON.stringify({
                         order_type: this.orderType,
                         items: this.cartItemsForApi(),
+                        ...this.discountPayload(),
                         ...this.cashierPayload(),
                     }),
                 });
@@ -690,12 +758,19 @@ window.StarrichPos = function StarrichPos(payload) {
             this.pushCartLine(p, null, []);
         },
 
+        productSellPrice(p) {
+            if (p.harga_jual != null) {
+                return Math.max(0, Number(p.harga_jual) || 0);
+            }
+            return Math.max(0, (Number(p.harga) || 0) - (Number(p.diskon) || 0));
+        },
+
         pushCartLine(p, suhu, addons) {
             const list = Array.isArray(addons) ? addons : [];
             const suhuNorm = suhu === 'ice' || suhu === 'hot' ? suhu : null;
             const addonsNorm = [...new Set(list.filter((x) => typeof x === 'string'))].sort();
             const unitExtra = this.addonExtraForCodes(addonsNorm);
-            const unitHarga = Number(p.harga) + unitExtra;
+            const unitHarga = this.productSellPrice(p) + unitExtra;
             const found = this.cart.find(
                 (c) =>
                     Number(c.product_id) === Number(p.id) &&
@@ -709,6 +784,8 @@ window.StarrichPos = function StarrichPos(payload) {
                     product_id: p.id,
                     nama_produk: p.nama_produk,
                     harga: unitHarga,
+                    harga_asli: Number(p.harga) || unitHarga,
+                    diskon_produk: Number(p.diskon) || 0,
                     qty: 1,
                     gambar: p.gambar,
                     suhu: suhuNorm,
@@ -824,6 +901,7 @@ window.StarrichPos = function StarrichPos(payload) {
                         order_type: this.orderType,
                         nama_pelanggan: nama,
                         items: this.cartItemsForApi(),
+                        ...this.discountPayload(),
                         ...this.cashierPayload(),
                     }),
                 });
@@ -833,6 +911,8 @@ window.StarrichPos = function StarrichPos(payload) {
                     return;
                 }
                 this.cart = [];
+                this.discountInput = '';
+                this.discountManual = false;
                 this.closePaymentModal();
                 this.openBillName = '';
                 this.paymentSplits = [{ metode: 'cash', jumlah: '' }];
@@ -884,6 +964,7 @@ window.StarrichPos = function StarrichPos(payload) {
                         nama_pelanggan: this.openBillName.trim() || null,
                         items: this.cartItemsForApi(),
                         payment_splits: splits,
+                        ...this.discountPayload(),
                         ...this.cashierPayload(),
                     }),
                 });
@@ -898,6 +979,8 @@ window.StarrichPos = function StarrichPos(payload) {
                 const kembalian = data?.data?.kembalian ?? Math.max(0, bayar - trxTotal);
                 const isKaryawan = (data?.data?.metode || splits[0]?.metode) === 'karyawan';
                 this.cart = [];
+                this.discountInput = '';
+                this.discountManual = false;
                 this.closePaymentModal();
                 this.paymentSplits = [{ metode: 'cash', jumlah: '' }];
                 this.syncOpenBills(data.open_bills);

@@ -535,7 +535,10 @@
         box-shadow: var(--vx-shadow);
     }
 
-    .vx-modal-panel.is-wide { max-width: 640px; }
+    .vx-modal-panel.is-wide {
+        max-width: 640px;
+        max-height: min(92vh, 780px);
+    }
     .vx-open-bill-list {
         display: flex;
         flex-direction: column;
@@ -665,7 +668,18 @@
         border-radius: var(--vx-radius);
         box-shadow: var(--vx-shadow-lg);
     }
+    .vx-modal-panel > form {
+        display: flex;
+        flex-direction: column;
+        flex: 1 1 auto;
+        min-height: 0;
+        overflow: hidden;
+    }
+    .vx-modal-panel > form > :not(.vx-modal-body) {
+        flex-shrink: 0;
+    }
     .vx-modal-head {
+        flex-shrink: 0;
         display: flex;
         align-items: flex-start;
         justify-content: space-between;
@@ -703,7 +717,11 @@
     .vx-modal-close svg { width: 16px; height: 16px; stroke: currentColor; fill: none; stroke-width: 2; }
     .vx-modal-body {
         padding: 18px 20px;
+        overflow-x: hidden;
         overflow-y: auto;
+        flex: 1 1 auto;
+        min-height: 0;
+        -webkit-overflow-scrolling: touch;
     }
     .vx-modal-meta {
         display: grid;

@@ -17,6 +17,8 @@ class Transaction extends Model
     public const METHOD_KARYAWAN = 'karyawan';
 
     protected $fillable = [
+        'subtotal',
+        'diskon',
         'total',
         'bayar',
         'kembalian',
@@ -32,6 +34,8 @@ class Transaction extends Model
     protected function casts(): array
     {
         return [
+            'subtotal' => 'integer',
+            'diskon' => 'integer',
             'total' => 'integer',
             'bayar' => 'integer',
             'kembalian' => 'integer',
@@ -150,6 +154,8 @@ class Transaction extends Model
         return [
             'id' => $this->id,
             'nama_pelanggan' => $this->nama_pelanggan,
+            'subtotal' => (int) ($this->subtotal ?: $this->total),
+            'diskon' => (int) ($this->diskon ?? 0),
             'total' => $this->total,
             'order_type' => $this->order_type,
             'created_at' => $this->created_at?->toIso8601String(),

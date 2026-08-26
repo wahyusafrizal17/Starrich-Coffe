@@ -157,7 +157,17 @@
                                     <td>
                                         <span class="vx-badge vx-badge-primary">{{ $p->category->nama_kategori ?? '—' }}</span>
                                     </td>
-                                    <td class="vx-text-end font-semibold text-slate-900">{{ format_rupiah($p->harga) }}</td>
+                                    <td class="vx-text-end font-semibold text-slate-900">
+                                        @if ($p->hasDiskon())
+                                            <div class="leading-tight">
+                                                <span class="block text-xs font-medium text-slate-400 line-through">{{ format_rupiah($p->harga) }}</span>
+                                                <span>{{ format_rupiah($p->hargaJual()) }}</span>
+                                                <span class="mt-0.5 block text-[10px] font-semibold uppercase tracking-wide text-rose-600">−{{ format_rupiah($p->diskonAmount()) }}</span>
+                                            </div>
+                                        @else
+                                            {{ format_rupiah($p->harga) }}
+                                        @endif
+                                    </td>
                                     <td class="vx-text-end">
                                         <div class="vx-table-actions justify-end">
                                             <button

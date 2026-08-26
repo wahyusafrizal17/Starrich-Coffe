@@ -32,6 +32,12 @@
                         <div class="cart-item-info">
                             <span class="cart-item-name" x-text="item.nama_produk"></span>
                             <span class="cart-item-sub" x-text="formatRp(item.harga) + ' × ' + item.qty"></span>
+                            <span
+                                class="cart-item-discount"
+                                x-show="Number(item.diskon_produk) > 0"
+                                x-text="'Diskon produk −' + formatRp(item.diskon_produk)"
+                                x-cloak
+                            ></span>
                             <div class="cart-item-tags" x-show="item.suhu === 'ice' || item.suhu === 'hot' || formatAddonsLine(item)" x-cloak>
                                 <span
                                     class="cart-tag"
@@ -73,13 +79,37 @@
                     <span>Subtotal</span>
                     <span x-text="formatRp(cartTotal)"></span>
                 </div>
-                <div class="summary-row">
-                    <span>Pajak (10%)</span>
-                    <span>Rp 0</span>
+                <div class="discount-field">
+                    <label for="sr-discount">Diskon</label>
+                    <div class="discount-input-wrap">
+                        <span class="discount-prefix">Rp</span>
+                        <input
+                            id="sr-discount"
+                            type="text"
+                            inputmode="numeric"
+                            autocomplete="off"
+                            placeholder="0"
+                            :value="discountManual ? discountInput : (autoCartDiscount > 0 ? formatNominalInput(autoCartDiscount) : discountInput)"
+                            x-on:input="onDiscountInput($event)"
+                            :disabled="cart.length === 0"
+                        />
+                    </div>
+                </div>
+                <div
+                    class="summary-row"
+                    x-show="!discountManual && autoCartPromo"
+                    x-cloak
+                >
+                    <span class="discount-promo-label" x-text="autoCartPromo ? autoCartPromo.nama : ''"></span>
+                    <span class="discount-value" x-text="autoCartPromo ? ('−' + formatRp(autoCartPromo.amount)) : ''"></span>
+                </div>
+                <div class="summary-row" x-show="discountAmount > 0 && (discountManual || !autoCartPromo)" x-cloak>
+                    <span>Potongan</span>
+                    <span class="discount-value" x-text="'- ' + formatRp(discountAmount)"></span>
                 </div>
                 <div class="summary-row total">
                     <span class="label">Total</span>
-                    <span class="value" x-text="formatRp(cartTotal)"></span>
+                    <span class="value" x-text="formatRp(payableTotal)"></span>
                 </div>
             </div>
 

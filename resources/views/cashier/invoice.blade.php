@@ -104,7 +104,14 @@
             </div>
 
             <div class="totals">
-                <div class="row"><span>Subtotal</span><span>{{ number_format($transaction->total, 0, ',', '.') }}</span></div>
+                @php
+                    $subtotal = (int) ($transaction->subtotal ?: $transaction->total);
+                    $diskon = (int) ($transaction->diskon ?? 0);
+                @endphp
+                <div class="row"><span>Subtotal</span><span>{{ number_format($subtotal, 0, ',', '.') }}</span></div>
+                @if ($diskon > 0)
+                    <div class="row"><span>Diskon</span><span>- {{ number_format($diskon, 0, ',', '.') }}</span></div>
+                @endif
                 <div class="row grand"><span>TOTAL</span><span>Rp {{ number_format($transaction->total, 0, ',', '.') }}</span></div>
                 @if ($transaction->isOpen())
                     <div class="row" style="margin-top:8px;font-weight:700;color:#b45309">

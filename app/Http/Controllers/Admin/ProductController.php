@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Category;
 use App\Models\Product;
+use App\Support\DiscountResolver;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -21,7 +22,7 @@ class ProductController extends Controller
             'filter_kategori' => $request->string('filter_kategori')->trim()->toString(),
         ];
 
-        $query = Product::with('category')->orderBy('nama_produk');
+        $query = Product::with(['category'])->orderBy('nama_produk');
 
         if ($columnFilters['filter_kategori'] !== '') {
             $query->where('kategori_id', (int) $columnFilters['filter_kategori']);
@@ -31,6 +32,7 @@ class ProductController extends Controller
         }
 
         $filteredTotal = (clone $query)->count();
+        app(DiscountResolver::class)->warm();
         $products = $query->paginate(15)->withQueryString();
         $categories = Category::orderBy('nama_kategori')->get();
         $catalogTotal = Product::count();

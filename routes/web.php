@@ -3,6 +3,7 @@
 use App\Http\Controllers\Admin\AssetController;
 use App\Http\Controllers\Admin\CapitalInflowController;
 use App\Http\Controllers\Admin\CategoryController;
+use App\Http\Controllers\Admin\DiscountController;
 use App\Http\Controllers\Admin\ExpenseController;
 use App\Http\Controllers\Admin\OrderAddonController;
 use App\Http\Controllers\Admin\ProductController;
@@ -41,6 +42,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::resource('categories', CategoryController::class)->except(['show', 'create', 'edit']);
         Route::resource('order-addons', OrderAddonController::class)->except(['show', 'create', 'edit']);
         Route::resource('products', ProductController::class)->except(['show', 'create', 'edit']);
+        Route::resource('diskon', DiscountController::class)
+            ->parameters(['diskon' => 'discount'])
+            ->names('discounts')
+            ->except(['show', 'create', 'edit']);
         Route::resource('users', UserController::class)->except(['show', 'create', 'edit']);
         Route::resource('pengeluaran', ExpenseController::class)
             ->parameters(['pengeluaran' => 'expense'])
@@ -60,7 +65,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('laporan/laba-rugi', [ReportController::class, 'profitLoss'])->name('reports.profit-loss');
 
         Route::put('pengaturan', [SettingsController::class, 'update'])->name('settings.update');
-        Route::redirect('pengaturan', '/profile');
+        Route::get('pengaturan', fn () => redirect()->route('profile.edit'));
     });
 
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');

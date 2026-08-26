@@ -18,6 +18,7 @@
         'updateOpenBillUrlTemplate' => route('cashier.open-bills.update', ['transaction' => '__ID__']),
         'invoiceUrlTemplate' => route('cashier.invoice', ['transaction' => '__ID__']),
         'addonsCatalog' => $addonsCatalog,
+        'cartPromos' => $cartPromos ?? [],
         'csrf' => csrf_token(),
         'isAdmin' => auth()->user()->isAdmin(),
         'userName' => auth()->user()->name,
@@ -96,7 +97,18 @@
                             <div class="item-body">
                                 <div class="item-name" x-text="p.nama_produk"></div>
                                 <div class="item-meta">
-                                    <span class="item-price" x-text="formatRp(p.harga)"></span>
+                                    <div class="item-price-wrap">
+                                        <span
+                                            class="item-price-old"
+                                            x-show="Number(p.diskon) > 0"
+                                            x-text="formatRp(p.harga)"
+                                            x-cloak
+                                        ></span>
+                                        <span class="item-price" x-text="formatRp(productSellPrice(p))"></span>
+                                    </div>
+                                    <span class="item-discount-badge" x-show="Number(p.diskon) > 0" x-cloak>
+                                        −<span x-text="formatRp(p.diskon)"></span>
+                                    </span>
                                 </div>
                             </div>
                         </button>

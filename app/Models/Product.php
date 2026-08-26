@@ -2,9 +2,11 @@
 
 namespace App\Models;
 
+use App\Support\DiscountResolver;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Product extends Model
 {
@@ -34,9 +36,40 @@ class Product extends Model
         return $this->hasMany(TransactionDetail::class, 'product_id');
     }
 
+    /** Diskon khusus jenis produk (satu per produk). */
+    /** @return HasOne<Discount, $this> */
+    public function discount(): HasOne
+    {
+        return $this->hasOne(Discount::class)->where('jenis', Discount::JENIS_PRODUCT);
+    }
+
+    /** @return HasOne<Discount, $this> */
+    public function activeDiscount(): HasOne
+    {
+        return $this->hasOne(Discount::class)
+            ->where('jenis', Discount::JENIS_PRODUCT)
+            ->where('is_active', true);
+    }
+
     public function imageUrl(): ?string
     {
         return $this->gambar ? asset('uploads/'.$this->gambar) : null;
+    }
+
+    public function diskonAmount(): int
+    {
+        return app(DiscountResolver::class)->itemDiscountAmount($this);
+    }
+
+    /** Harga jual setelah diskon item aktif (minimal 0). */
+    public function hargaJual(): int
+    {
+        return app(DiscountResolver::class)->hargaJual($this);
+    }
+
+    public function hasDiskon(): bool
+    {
+        return $this->diskonAmount() > 0;
     }
 
     /** Menu minuman/kopi: perlu pilih Ice/Hot di kasir. */

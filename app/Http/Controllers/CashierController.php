@@ -6,6 +6,7 @@ use App\Models\Category;
 use App\Models\Product;
 use App\Models\Transaction;
 use App\Models\TransactionDetail;
+use App\Support\DiscountResolver;
 use App\Support\OrderAddonCatalog;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -18,6 +19,7 @@ class CashierController extends Controller
 {
     public function index(): View
     {
+        $resolver = app(DiscountResolver::class)->warm();
         $categories = Category::orderBy('nama_kategori')->get();
         $products = Product::with('category')
             ->orderBy('nama_produk')
@@ -26,6 +28,8 @@ class CashierController extends Controller
                 'id' => $p->id,
                 'nama_produk' => $p->nama_produk,
                 'harga' => $p->harga,
+                'diskon' => $resolver->itemDiscountAmount($p),
+                'harga_jual' => $resolver->hargaJual($p),
                 'kategori_id' => $p->kategori_id,
                 'gambar' => $p->imageUrl(),
                 'suhu_pilihan' => $p->requiresSuhuPilihan(),
@@ -45,6 +49,7 @@ class CashierController extends Controller
             'categories' => $categories,
             'products' => $products,
             'addonsCatalog' => $addonsCatalog,
+            'cartPromos' => $resolver->cartPromoCatalog(),
             'openBillsCount' => $this->openBillsCount(),
         ]);
     }
@@ -231,6 +236,7 @@ class CashierController extends Controller
             'payment_splits' => ['nullable', 'array'],
             'payment_splits.*.metode' => ['required_with:payment_splits', 'string', 'in:qris,transfer,cash,karyawan'],
             'payment_splits.*.jumlah' => ['required_with:payment_splits', 'integer', 'min:0'],
+            'diskon' => ['nullable', 'integer', 'min:0'],
         ];
 
         if ($request->user()->isAdmin()) {
@@ -286,6 +292,8 @@ class CashierController extends Controller
                 'nama_pelanggan' => $transaction->nama_pelanggan,
                 'nama_kasir' => $transaction->nama_kasir,
                 'order_type' => $transaction->order_type ?? 'dine',
+                'subtotal' => (int) ($transaction->subtotal ?: $transaction->total),
+                'diskon' => (int) ($transaction->diskon ?? 0),
                 'items' => $items,
             ],
         ]);
@@ -308,6 +316,7 @@ class CashierController extends Controller
             'items.*.suhu' => ['nullable', 'string', 'in:ice,hot'],
             'items.*.addons' => ['nullable', 'array'],
             'items.*.addons.*' => ['string', Rule::in(OrderAddonCatalog::validCodes())],
+            'diskon' => ['nullable', 'integer', 'min:0'],
         ];
 
         if ($request->user()->isAdmin()) {
@@ -317,13 +326,16 @@ class CashierController extends Controller
         $data = $request->validate($rules);
 
         $result = DB::transaction(function () use ($data, $transaction, $request) {
-            [$total, $prepared] = $this->prepareLineItems($data['items']);
+            [$subtotal, $prepared] = $this->prepareLineItems($data['items']);
+            $amounts = $this->applyDiscount($subtotal, $data['diskon'] ?? 0);
 
             $transaction->details()->delete();
             $this->createTransactionDetails($transaction, $prepared);
 
             $updates = [
-                'total' => $total,
+                'subtotal' => $amounts['subtotal'],
+                'diskon' => $amounts['diskon'],
+                'total' => $amounts['total'],
                 'order_type' => $data['order_type'] ?? $transaction->order_type,
             ];
 
@@ -335,7 +347,9 @@ class CashierController extends Controller
 
             return [
                 'transaction_id' => $transaction->id,
-                'total' => $total,
+                'subtotal' => $amounts['subtotal'],
+                'diskon' => $amounts['diskon'],
+                'total' => $amounts['total'],
             ];
         });
 
@@ -435,10 +449,13 @@ class CashierController extends Controller
     private function storeOpenBill(Request $request, array $data): JsonResponse
     {
         $result = DB::transaction(function () use ($data, $request) {
-            [$total, $prepared] = $this->prepareLineItems($data['items']);
+            [$subtotal, $prepared] = $this->prepareLineItems($data['items']);
+            $amounts = $this->applyDiscount($subtotal, $data['diskon'] ?? 0);
 
             $transaction = Transaction::create([
-                'total' => $total,
+                'subtotal' => $amounts['subtotal'],
+                'diskon' => $amounts['diskon'],
+                'total' => $amounts['total'],
                 'bayar' => 0,
                 'kembalian' => 0,
                 'metode_pembayaran' => 'open_bill',
@@ -454,7 +471,9 @@ class CashierController extends Controller
 
             return [
                 'transaction_id' => $transaction->id,
-                'total' => $total,
+                'subtotal' => $amounts['subtotal'],
+                'diskon' => $amounts['diskon'],
+                'total' => $amounts['total'],
                 'status' => Transaction::STATUS_OPEN,
             ];
         });
@@ -473,9 +492,10 @@ class CashierController extends Controller
     private function storePaidCheckout(Request $request, array $data): JsonResponse
     {
         $result = DB::transaction(function () use ($data, $request) {
-            [$total, $prepared] = $this->prepareLineItems($data['items']);
+            [$subtotal, $prepared] = $this->prepareLineItems($data['items']);
+            $amounts = $this->applyDiscount($subtotal, $data['diskon'] ?? 0);
 
-            $resolved = $this->resolvePaymentFromSplits($data['payment_splits'] ?? [], $total);
+            $resolved = $this->resolvePaymentFromSplits($data['payment_splits'] ?? [], $amounts['total']);
 
             $namaPelanggan = trim((string) ($data['nama_pelanggan'] ?? ''));
             if ($resolved['metode'] === Transaction::METHOD_KARYAWAN && $namaPelanggan === '') {
@@ -485,7 +505,9 @@ class CashierController extends Controller
             }
 
             $transaction = Transaction::create([
-                'total' => $total,
+                'subtotal' => $amounts['subtotal'],
+                'diskon' => $amounts['diskon'],
+                'total' => $amounts['total'],
                 'bayar' => $resolved['bayar'],
                 'kembalian' => $resolved['kembalian'],
                 'metode_pembayaran' => $resolved['metode'],
@@ -501,7 +523,9 @@ class CashierController extends Controller
 
             return [
                 'transaction_id' => $transaction->id,
-                'total' => $total,
+                'subtotal' => $amounts['subtotal'],
+                'diskon' => $amounts['diskon'],
+                'total' => $amounts['total'],
                 'bayar' => $resolved['bayar'],
                 'kembalian' => $resolved['kembalian'],
                 'metode' => $resolved['metode'],
@@ -519,17 +543,39 @@ class CashierController extends Controller
     }
 
     /**
+     * @return array{subtotal: int, diskon: int, total: int}
+     */
+    private function applyDiscount(int $subtotal, mixed $diskonInput): array
+    {
+        $diskon = max(0, (int) $diskonInput);
+        if ($diskon > $subtotal) {
+            throw ValidationException::withMessages([
+                'diskon' => 'Diskon tidak boleh melebihi subtotal.',
+            ]);
+        }
+
+        return [
+            'subtotal' => $subtotal,
+            'diskon' => $diskon,
+            'total' => $subtotal - $diskon,
+        ];
+    }
+
+    /**
      * @param  array<int, array{product_id: int, qty: int, suhu?: string|null, addons?: array<int, string>|null}>  $items
      * @return array{0: int, 1: list<array{product: Product, qty: int, subtotal: int, suhu: string|null, addons: list<string>, unit_harga: int}>}
      */
     private function prepareLineItems(array $items): array
     {
+        app(DiscountResolver::class)->warm();
+
         $total = 0;
         $prepared = [];
 
         foreach ($items as $index => $line) {
             /** @var Product $product */
-            $product = Product::query()->with('category')->findOrFail($line['product_id']);
+            $product = Product::query()->with(['category'])->findOrFail($line['product_id']);
+            $resolver = app(DiscountResolver::class);
 
             $addonsNorm = OrderAddonCatalog::normalize($line['addons'] ?? null);
             if (! $product->allowsOrderAddons()) {
@@ -537,7 +583,7 @@ class CashierController extends Controller
             }
 
             $addonExtra = OrderAddonCatalog::extraPriceForCodes($addonsNorm);
-            $unitHarga = $product->harga + $addonExtra;
+            $unitHarga = $resolver->hargaJual($product) + $addonExtra;
             $subtotal = $unitHarga * $line['qty'];
             $total += $subtotal;
 

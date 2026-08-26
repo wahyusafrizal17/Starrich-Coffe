@@ -47,6 +47,10 @@
                     <svg viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="m20.25 7.5-8.25 4.5-8.25-4.5M12 12v9.75M20.25 7.5v9l-8.25 4.5L3.75 16.5v-9L12 3l8.25 4.5Z"/></svg>
                     Produk
                 </a>
+                <a href="{{ route('admin.discounts.index') }}" class="vx-sidebar-link {{ request()->routeIs('admin.discounts.*') ? 'is-active' : '' }}">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M9.568 3H5.25A2.25 2.25 0 0 0 3 5.25v4.318c0 .597.237 1.17.659 1.591l9.581 9.581c.699.699 1.78.872 2.607.33a18.095 18.095 0 0 0 5.223-5.223c.542-.827.369-1.908-.33-2.607L11.16 3.66A2.25 2.25 0 0 0 9.568 3Z"/><path stroke-linecap="round" stroke-linejoin="round" d="M6 6h.008v.008H6V6Z"/></svg>
+                    Diskon
+                </a>
                 <a href="{{ route('admin.categories.index') }}" class="vx-sidebar-link {{ request()->routeIs('admin.categories.*') ? 'is-active' : '' }}">
                     <svg viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M3 7.5A1.5 1.5 0 0 1 4.5 6h3.879c.265 0 .52.105.707.293L10.5 7.5h9A1.5 1.5 0 0 1 21 9v9a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 18V7.5Z"/></svg>
                     Kategori
