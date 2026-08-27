@@ -51,12 +51,12 @@
         .btn-close { background: #fff; color: #1f2937; border-color: #e5e7eb; }
         .btn-close:hover { background: #f3f4f6; }
 
-        @media print {
+        @@media print {
             html, body { background: #fff; }
             .wrap { padding: 0; }
             .receipt { box-shadow: none; width: 80mm; padding: 6mm 4mm; border-radius: 0; }
             .actions { display: none !important; }
-            @page { margin: 4mm; size: 80mm auto; }
+            @@page { margin: 4mm; size: 80mm auto; }
         }
     </style>
 </head>
@@ -82,7 +82,9 @@
 
             <div class="items">
                 @foreach ($transaction->details as $d)
-                    @php($addonLine = \App\Support\OrderAddonCatalog::labelsLine($d->addons ?? []))
+                    @php
+                        $addonLine = \App\Support\OrderAddonCatalog::labelsLine($d->addons ?? []);
+                    @endphp
                     <div class="item">
                         <div class="item-name">
                             {{ $d->product->nama_produk ?? 'Produk' }}
